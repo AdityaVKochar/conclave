@@ -1,6 +1,7 @@
 "use client";
 
 import { RefreshCw, UserX } from "lucide-react";
+import Image from "next/image";
 import type { ConnectionState } from "../types";
 import ConnectionIndicator from "./ConnectionIndicator";
 import VideoSettings from "./video-settings";
@@ -53,29 +54,27 @@ export default function MeetsHeader({
   connectionState,
 }: MeetsHeaderProps) {
   return (
-    <div className="flex items-center justify-between p-4 bg-[#151515] border-b border-white/5">
-      <div className="flex items-center gap-2">
-        <h1
-          className="text-xl font-bold tracking-[0.5px]"
-          style={{ fontWeight: 700 }}
-        >
-          ACM c0nclav3
-        </h1>
+    <header className="fixed top-0 left-0 right-0 z-[100] pointer-events-none">
+      <div className="flex items-center justify-between px-4 py-3 pointer-events-auto">
+        <a href="/" className="flex items-center">
+          <Image
+            src="/assets/acm_topleft.svg"
+            alt="ACM Logo"
+            width={128}
+            height={128}
+          />
+        </a>
+
         {isJoined && (
-          <div className="flex items-stretch gap-2 ml-2 hidden sm:flex h-8">
+          <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3">
             {isAdmin && (
-              <div
-                className="flex items-center bg-white/5 px-3 rounded-md text-sm text-white/80 border border-white/10"
-                style={{ fontWeight: 500 }}
+              <span 
+                className="text-[12px] text-[#FEFCD9]/50"
+                style={{ fontFamily: "'PolySans Mono', monospace" }}
               >
-                <span className="text-white/40 mr-2">Room:</span>
-                <span
-                  className="font-bold tabular-nums"
-                  style={{ fontWeight: 700 }}
-                >
-                  {roomId}
-                </span>
-              </div>
+                <span className="text-[#FEFCD9]/30">room</span>{" "}
+                <span className="text-[#F95F4A]">{roomId}</span>
+              </span>
             )}
             <VideoSettings
               isMirrorCamera={isMirrorCamera}
@@ -97,36 +96,42 @@ export default function MeetsHeader({
             />
           </div>
         )}
+
+        <div className="flex items-center gap-4">
+          {isScreenSharing && (
+            <div className="flex items-center gap-1.5 text-[#F95F4A] text-[10px] uppercase tracking-wider" style={{ fontFamily: "'PolySans Mono', monospace" }}>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#F95F4A] animate-pulse"></span>
+              Sharing
+            </div>
+          )}
+          {ghostEnabled && isJoined && (
+            <div className="flex items-center gap-1.5 text-[#FF007A] text-[10px] uppercase tracking-wider" style={{ fontFamily: "'PolySans Mono', monospace" }}>
+              <UserX className="w-3 h-3" />
+              Ghost
+            </div>
+          )}
+          {connectionState === "reconnecting" && (
+            <div className="flex items-center gap-1.5 text-amber-400 text-[10px] uppercase tracking-wider" style={{ fontFamily: "'PolySans Mono', monospace" }}>
+              <RefreshCw className="w-3 h-3 animate-spin" />
+              Reconnecting
+            </div>
+          )}
+          <div className="flex flex-col items-end">
+            <span 
+              className="text-sm text-[#FEFCD9]"
+              style={{ fontFamily: "'PolySans Bulky Wide', sans-serif" }}
+            >
+              c0nclav3
+            </span>
+            <span 
+              className="text-[9px] uppercase tracking-[0.15em] text-[#FEFCD9]/40"
+              style={{ fontFamily: "'PolySans Mono', monospace" }}
+            >
+              by acm-vit
+            </span>
+          </div>
+        </div>
       </div>
-      <div className="flex items-center gap-3">
-        {isScreenSharing && (
-          <span
-            className="bg-red-500/10 border border-red-500/20 text-red-500 text-xs px-2 py-0.5 rounded-full animate-pulse tracking-[0.5px]"
-            style={{ fontWeight: 500 }}
-          >
-            Screen is being shared
-          </span>
-        )}
-        {ghostEnabled && isJoined && (
-          <span
-            className="bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs px-2 py-0.5 rounded-full tracking-[0.5px] flex items-center gap-1"
-            style={{ fontWeight: 500 }}
-          >
-            <UserX className="w-3 h-3" />
-            Ghost mode
-          </span>
-        )}
-        {connectionState === "reconnecting" && (
-          <span
-            className="bg-yellow-600 text-xs px-2 py-1 rounded flex items-center gap-1 tracking-[0.5px]"
-            style={{ fontWeight: 500 }}
-          >
-            <RefreshCw className="w-3 h-3 animate-spin" />
-            Reconnecting...
-          </span>
-        )}
-        {/* <ConnectionIndicator state={connectionState} /> */}
-      </div>
-    </div>
+    </header>
   );
 }

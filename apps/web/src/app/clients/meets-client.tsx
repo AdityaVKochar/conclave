@@ -1,7 +1,7 @@
 "use client";
 
 import { Roboto } from "next/font/google";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { RoomInfo } from "@/lib/sfu-types";
 import {
   MeetsErrorBanner,
@@ -22,6 +22,7 @@ import { useMeetRefs } from "./meets/hooks/useMeetRefs";
 import { useMeetRooms } from "./meets/hooks/useMeetRooms";
 import { useMeetSocket } from "./meets/hooks/useMeetSocket";
 import { useMeetState } from "./meets/hooks/useMeetState";
+import { ADMIN_EMAILS } from "../../../../../../src/lib/admin-config";
 import type { ParticipantsPanelGetRooms } from "./meets/components/ParticipantsPanel";
 
 const roboto = Roboto({
@@ -61,6 +62,16 @@ export default function MeetsClient({
   getRoomsForRedirect,
   reactionAssets,
 }: MeetsClientProps) {
+  const [currentUser, setCurrentUser] = useState(user);
+  const [currentIsAdmin, setCurrentIsAdmin] = useState(isAdmin);
+
+  useEffect(() => {
+    if (currentUser?.email && ADMIN_EMAILS.includes(currentUser.email)) {
+      setCurrentIsAdmin(true);
+    } else if (currentUser && !currentUser.email?.includes('guest')) {
+      setCurrentIsAdmin(false);
+    }
+  }, [currentUser]);
   const refs = useMeetRefs();
   const {
     connectionState,
@@ -112,11 +123,11 @@ export default function MeetsClient({
     setSelectedAudioOutputDeviceId,
   } = useMeetMediaSettings({ videoQualityRef: refs.videoQualityRef });
 
-  const isAdminFlag = Boolean(isAdmin);
+  const isAdminFlag = Boolean(currentIsAdmin);
   const ghostEnabled = isAdminFlag && isGhostMode;
 
-  const userEmail = user?.name || user?.email || user?.id || "guest";
-  const userKey = user?.email || user?.id || "guest";
+  const userEmail = currentUser?.name || currentUser?.email || currentUser?.id || "guest";
+  const userKey = currentUser?.email || currentUser?.id || "guest";
   const userId = `${userKey}#${refs.sessionIdRef.current}`;
 
   const {
@@ -129,7 +140,7 @@ export default function MeetsClient({
     resolveDisplayName,
     canUpdateDisplayName,
   } = useMeetDisplayName({
-    user,
+    user: currentUser,
     userId,
     isAdmin: isAdminFlag,
     ghostEnabled,
@@ -395,6 +406,7 @@ export default function MeetsClient({
         setRoomId={setRoomId}
         joinRoom={joinRoom}
         joinRoomById={joinRoomById}
+        user={currentUser}
         userEmail={userEmail}
         isAdmin={isAdminFlag}
         showPermissionHint={showPermissionHint}
@@ -445,6 +457,8 @@ export default function MeetsClient({
         resolveDisplayName={resolveDisplayName}
         reactions={reactionEvents}
         getRoomsForRedirect={getRoomsForRedirect}
+        onUserChange={(user) => setCurrentUser(user ?? undefined)}
+        onIsAdminChange={setCurrentIsAdmin}
       />
     </div>
   );

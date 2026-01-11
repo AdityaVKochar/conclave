@@ -111,145 +111,126 @@ export default function ParticipantsPanel({
 
   return (
     <div
-      className="absolute right-4 top-4 bottom-20 w-80 bg-[#1f1f1f] rounded-lg shadow-2xl flex flex-col border border-white/5 z-10 overflow-hidden"
-      style={{ fontFamily: "'Roboto', sans-serif" }}
+      className="fixed right-4 top-16 bottom-20 w-72 bg-[#0d0e0d]/95 backdrop-blur-md border border-[#FEFCD9]/10 rounded-xl flex flex-col z-40 shadow-2xl overflow-hidden"
+      style={{ fontFamily: "'PolySans Trial', sans-serif" }}
     >
-      <div className="flex flex-col border-b border-white/5">
-        <div className="flex items-center justify-between p-3">
-          <h3 className="text-sm tracking-[0.5px]" style={{ fontWeight: 700 }}>
-            Participants (
-            <span className="tabular-nums">{participantsList.length + 1}</span>)
-          </h3>
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#FEFCD9]/10">
+        <span 
+          className="text-[10px] uppercase tracking-[0.12em] text-[#FEFCD9]/60 flex items-center gap-1.5"
+          style={{ fontFamily: "'PolySans Mono', monospace" }}
+        >
+          <Users className="w-3.5 h-3.5" />
+          Participants
+          <span className="text-[#F95F4A]">({participantsList.length + 1})</span>
+        </span>
+        <button
+          onClick={onClose}
+          className="w-6 h-6 rounded flex items-center justify-center text-[#FEFCD9]/50 hover:text-[#FEFCD9] hover:bg-[#FEFCD9]/10 transition-all"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+      
+      {isAdmin && (
+        <div className="px-3 py-2 flex gap-1.5 border-b border-[#FEFCD9]/5">
           <button
-            onClick={onClose}
-            className="p-1 hover:bg-white/10 rounded transition-colors text-neutral-400 hover:text-white"
+            onClick={() =>
+              socket?.emit("muteAll", (res: unknown) =>
+                console.log("Muted all:", res)
+              )
+            }
+            className="flex-1 text-[9px] py-1.5 rounded-md flex items-center justify-center gap-1 text-[#FEFCD9]/60 hover:text-[#F95F4A] hover:bg-[#F95F4A]/10 transition-all uppercase tracking-wider"
+            title="Mute all"
           >
-            <X className="w-5 h-5" />
+            <MicOff className="w-3 h-3" />
+            Mute
+          </button>
+          <button
+            onClick={() =>
+              socket?.emit("closeAllVideo", (res: unknown) =>
+                console.log("Stopped all video:", res)
+              )
+            }
+            className="flex-1 text-[9px] py-1.5 rounded-md flex items-center justify-center gap-1 text-[#FEFCD9]/60 hover:text-[#F95F4A] hover:bg-[#F95F4A]/10 transition-all uppercase tracking-wider"
+            title="Stop all video"
+          >
+            <VideoOff className="w-3 h-3" />
+            Video
           </button>
         </div>
-        {isAdmin && (
-          <div className="px-3 pb-3 flex gap-2">
-            <button
-              onClick={() =>
-                socket?.emit("muteAll", (res: unknown) =>
-                  console.log("Muted all:", res)
-                )
-              }
-              className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs py-1.5 rounded flex items-center justify-center gap-1.5 transition-colors border border-red-500/20 tracking-[0.5px]"
-              style={{ fontWeight: 500 }}
-              title="Mute all participants"
-            >
-              <MicOff className="w-3 h-3" />
-              Mute All
-            </button>
-            <button
-              onClick={() =>
-                socket?.emit("closeAllVideo", (res: unknown) =>
-                  console.log("Stopped all video:", res)
-                )
-              }
-              className="flex-1 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs py-1.5 rounded flex items-center justify-center gap-1.5 transition-colors border border-red-500/20 tracking-[0.5px]"
-              style={{ fontWeight: 500 }}
-              title="Stop video for all participants"
-            >
-              <VideoOff className="w-3 h-3" />
-              Stop Video
-            </button>
-          </div>
-        )}
-      </div>
+      )}
 
       {isAdmin && pendingList.length > 0 && (
-        <div className="border-b border-white/10 bg-blue-500/10">
+        <div className="border-b border-[#FEFCD9]/5">
           <button
             type="button"
             onClick={() => setIsPendingExpanded((prev) => !prev)}
-            className="w-full px-3 py-2 flex items-center justify-between hover:bg-blue-500/5 transition-colors"
+            className="w-full px-3 py-2 flex items-center justify-between hover:bg-[#F95F4A]/5 transition-colors"
             aria-expanded={isPendingExpanded}
           >
-            <div className="flex items-center gap-2">
-              <h4 className="font-bold text-xs text-blue-400 uppercase tracking-wide">
-                Pending Requests
-              </h4>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-200 tabular-nums">
+            <span className="text-[10px] text-[#F95F4A] uppercase tracking-wider flex items-center gap-1.5">
+              Pending
+              <span className="px-1.5 py-0.5 rounded bg-[#F95F4A]/20 text-[9px] tabular-nums">
                 {pendingList.length}
               </span>
-            </div>
+            </span>
             <ChevronDown
-              className={`w-3.5 h-3.5 text-blue-200 transition-transform ${
+              className={`w-3 h-3 text-[#F95F4A] transition-transform ${
                 isPendingExpanded ? "rotate-180" : ""
               }`}
             />
           </button>
           {isPendingExpanded && (
-            <div className="px-3 pb-3">
-              <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                {pendingList.map(([userId, displayName]) => {
-                  const pendingName = formatDisplayName(displayName || userId);
-                  return (
-                    <div
-                      key={userId}
-                      className="relative flex items-center justify-between p-2 rounded bg-black/40 border border-white/10"
-                    >
-                      <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
-                        <div className="w-6 h-6 rounded-full bg-neutral-800 flex items-center justify-center text-[10px] border border-white/10 shrink-0">
-                          {pendingName[0]?.toUpperCase() || "?"}
-                        </div>
-                        <span className="text-sm truncate text-white/80">
-                          {pendingName}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          onClick={() =>
-                            socket?.emit(
-                              "admitUser",
-                              { userId },
-                              (res: { success?: boolean; error?: string }) => {
-                                if (res?.error) {
-                                  console.error("[Meets] Admit failed:", res.error);
-                                  onPendingUserStale?.(userId);
-                                }
-                              }
-                            )
-                          }
-                          className="p-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-500 rounded transition-colors text-xs font-medium"
-                          title="Admit"
-                        >
-                          Admit
-                        </button>
-                        <button
-                          onClick={() =>
-                            socket?.emit(
-                              "rejectUser",
-                              { userId },
-                              (res: { success?: boolean; error?: string }) => {
-                                if (res?.error) {
-                                  console.error(
-                                    "[Meets] Reject failed:",
-                                    res.error
-                                  );
-                                  onPendingUserStale?.(userId);
-                                }
-                              }
-                            )
-                          }
-                          className="p-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-500 rounded transition-colors text-xs font-medium"
-                          title="Reject"
-                        >
-                          Reject
-                        </button>
-                      </div>
+            <div className="px-3 pb-2 space-y-1 max-h-32 overflow-y-auto">
+              {pendingList.map(([userId, displayName]) => {
+                const pendingName = formatDisplayName(displayName || userId);
+                return (
+                  <div
+                    key={userId}
+                    className="flex items-center justify-between py-1.5 px-2 rounded-md bg-black/30"
+                  >
+                    <span className="text-xs text-[#FEFCD9]/70 truncate flex-1">
+                      {pendingName}
+                    </span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() =>
+                          socket?.emit(
+                            "admitUser",
+                            { userId },
+                            (res: { success?: boolean; error?: string }) => {
+                              if (res?.error) onPendingUserStale?.(userId);
+                            }
+                          )
+                        }
+                        className="px-2 py-1 text-[9px] text-green-400 hover:bg-green-500/20 rounded transition-all"
+                      >
+                        ✓
+                      </button>
+                      <button
+                        onClick={() =>
+                          socket?.emit(
+                            "rejectUser",
+                            { userId },
+                            (res: { success?: boolean; error?: string }) => {
+                              if (res?.error) onPendingUserStale?.(userId);
+                            }
+                          )
+                        }
+                        className="px-2 py-1 text-[9px] text-red-400 hover:bg-red-500/20 rounded transition-all"
+                      >
+                        ✕
+                      </button>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
       )}
 
-      <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2">
+      <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 space-y-0.5">
         {participantsList.map((p) => {
           const isMe = p.userId === currentUserId;
           const displayName = getDisplayName(p.userId);
@@ -258,166 +239,106 @@ export default function ParticipantsPanel({
           return (
             <div
               key={p.userId}
-              className={`relative flex items-center justify-between p-2 rounded-lg border ${
-                isMe
-                  ? "bg-white/5 border-white/20"
-                  : "bg-transparent border-white/5"
-              }`}
+              className={`flex items-center justify-between px-2 py-1.5 rounded-md ${
+                isMe ? "bg-[#F95F4A]/5" : "hover:bg-[#FEFCD9]/5"
+              } transition-all`}
             >
-              <div className="flex items-center gap-3 overflow-hidden flex-1 min-w-0">
-                <div
-                  className="w-8 h-8 rounded-full bg-neutral-800 flex items-center justify-center text-xs border border-white/10 shrink-0"
-                  style={{ fontWeight: 500 }}
-                >
-                  {displayName[0]?.toUpperCase() || "?"}
-                </div>
-                <span className="text-sm truncate" style={{ fontWeight: 500 }}>
-                  {displayName} {isMe && "(You)"}
-                </span>
-              </div>
+              <span className="text-xs text-[#FEFCD9]/80 truncate flex-1">
+                {displayName} {isMe && <span className="text-[#F95F4A]/60">(you)</span>}
+              </span>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1 shrink-0">
                 {p.isHandRaised && (
-                  <div
-                    className="flex items-center text-amber-300"
-                    title="Hand raised"
-                  >
-                    <Hand className="w-3 h-3" />
-                  </div>
+                  <Hand className="w-3 h-3 text-amber-400" />
                 )}
                 {p.screenShareStream && (
-                  <div className="flex items-center gap-1">
-                    <Monitor className="w-3 h-3 text-green-500" />
-                    {isAdmin && !isMe && p.screenShareProducerId && (
+                  <Monitor className="w-3 h-3 text-green-500" />
+                )}
+                {p.isCameraOff ? (
+                  <VideoOff className="w-3 h-3 text-red-400/60" />
+                ) : (
+                  <Video className="w-3 h-3 text-green-500/60" />
+                )}
+                {p.isMuted ? (
+                  <MicOff className="w-3 h-3 text-red-400/60" />
+                ) : (
+                  <Mic className="w-3 h-3 text-green-500/60" />
+                )}
+                {isAdmin && !isMe && (
+                  <>
+                    {p.videoProducerId && !p.isCameraOff && (
                       <button
-                        onClick={() => {
-                          if (p.screenShareProducerId)
-                            handleCloseProducer(p.screenShareProducerId);
-                        }}
-                        className="text-red-500 hover:text-red-400"
-                        title="Stop screen share"
+                        onClick={() => handleCloseProducer(p.videoProducerId!)}
+                        className="p-0.5 text-[#FEFCD9]/30 hover:text-red-400 transition-colors"
+                        title="Stop video"
                       >
-                        <X className="w-3 h-3" />
+                        <X className="w-2.5 h-2.5" />
                       </button>
                     )}
-                  </div>
-                )}
-
-                {p.isCameraOff ? (
-                  <VideoOff className="w-3 h-3 text-red-500" />
-                ) : isAdmin && !isMe && p.videoProducerId ? (
-                  <button
-                    onClick={() => {
-                      if (p.videoProducerId)
-                        handleCloseProducer(p.videoProducerId);
-                    }}
-                    className="flex items-center gap-1 text-red-500 hover:text-red-400 p-1 hover:bg-white/5 rounded transition-colors"
-                    title="Stop video"
-                  >
-                    <Video className="w-3 h-3 text-green-500" />
-                    <X className="w-3 h-3" />
-                  </button>
-                ) : (
-                  <Video className="w-3 h-3 text-green-500" />
-                )}
-
-                {p.isMuted ? (
-                  <MicOff className="w-3 h-3 text-red-500" />
-                ) : isAdmin && !isMe && p.audioProducerId ? (
-                  <button
-                    onClick={() => {
-                      if (p.audioProducerId)
-                        handleCloseProducer(p.audioProducerId);
-                    }}
-                    className="flex items-center gap-1 text-red-500 hover:text-red-400 p-1 hover:bg-white/5 rounded transition-colors"
-                    title="Stop audio"
-                  >
-                    <Mic className="w-3 h-3 text-green-500" />
-                    <X className="w-3 h-3" />
-                  </button>
-                ) : (
-                  <Mic className="w-3 h-3 text-green-500" />
+                    {p.audioProducerId && !p.isMuted && (
+                      <button
+                        onClick={() => handleCloseProducer(p.audioProducerId!)}
+                        className="p-0.5 text-[#FEFCD9]/30 hover:text-red-400 transition-colors"
+                        title="Mute"
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => openRedirectModal(p.userId)}
+                      className="p-0.5 text-[#FEFCD9]/30 hover:text-blue-400 transition-colors"
+                      title="Redirect"
+                    >
+                      <ArrowRight className="w-2.5 h-2.5" />
+                    </button>
+                    <button
+                      onClick={() =>
+                        socket?.emit("kickUser", { userId: p.userId }, () => {})
+                      }
+                      className="p-0.5 text-[#FEFCD9]/30 hover:text-red-400 transition-colors"
+                      title="Kick"
+                    >
+                      <UserMinus className="w-2.5 h-2.5" />
+                    </button>
+                  </>
                 )}
               </div>
-
-              {isAdmin && !isMe && (
-                <div className="flex items-center gap-1 ml-2">
-                  <button
-                    onClick={() => openRedirectModal(p.userId)}
-                    className="text-blue-500 hover:text-blue-400 p-1 hover:bg-white/5 rounded transition-colors"
-                    title="Redirect user"
-                  >
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() =>
-                      socket?.emit("kickUser", { userId: p.userId }, () => {})
-                    }
-                    className="text-red-500 hover:text-red-400 p-1 hover:bg-white/5 rounded transition-colors"
-                    title="Kick user"
-                  >
-                    <UserMinus className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
             </div>
           );
         })}
       </div>
 
       {showRedirectModal && (
-        <div className="absolute inset-0 bg-[#1a1a1a] z-20 flex flex-col pt-4 pb-2 px-2 animate-in fade-in duration-200">
-          <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-3 px-2">
-            <div>
-              <h4
-                className="text-sm tracking-[0.5px] text-white"
-                style={{ fontWeight: 700 }}
-              >
-                Select Room
-              </h4>
-              <p className="text-[10px] text-neutral-400 mt-0.5">
-                Redirect user to another room
-              </p>
-            </div>
+        <div className="absolute inset-0 bg-[#0d0e0d]/98 backdrop-blur-sm z-20 flex flex-col p-3 rounded-xl">
+          <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#FEFCD9]/5">
+            <span className="text-[10px] uppercase tracking-wider text-[#FEFCD9]/60">
+              Redirect to
+            </span>
             <button
               onClick={() => setShowRedirectModal(false)}
-              className="text-neutral-400 hover:text-white p-1 hover:bg-white/5 rounded transition-all"
+              className="w-5 h-5 flex items-center justify-center text-[#FEFCD9]/40 hover:text-[#FEFCD9] transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto space-y-2 px-1 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto space-y-1">
             {filteredRooms.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-40 text-neutral-500 gap-2">
-                <AlertCircle className="w-8 h-8 opacity-20" />
-                <p className="text-sm">No other active rooms</p>
+              <div className="flex items-center justify-center h-20 text-[#FEFCD9]/30 text-xs">
+                No other rooms
               </div>
             ) : (
               filteredRooms.map((room) => (
                 <button
                   key={room.id}
                   onClick={() => handleRedirect(room.id)}
-                  className="w-full text-left p-3 rounded-lg bg-[#252525] hover:bg-[#333] border border-white/5 hover:border-white/10 transition-all flex justify-between items-center group relative overflow-hidden"
+                  className="w-full text-left px-3 py-2 rounded-md hover:bg-[#FEFCD9]/5 transition-all flex justify-between items-center"
                 >
-                  <div className="flex flex-col z-10">
-                    <span
-                      className="text-sm text-white group-hover:text-blue-400 transition-colors"
-                      style={{ fontWeight: 600 }}
-                    >
-                      {room.id}
-                    </span>
-                    <span className="text-[10px] text-neutral-500 group-hover:text-neutral-400">
-                      ID: {room.id.substring(0, 8)}...
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 z-10">
-                    <div className="flex items-center gap-1.5 text-xs text-neutral-400 bg-black/20 px-2 py-1 rounded">
-                      <Users className="w-3 h-3" />
-                      <span className="tabular-nums">{room.userCount}</span>
-                    </div>
-                    <ArrowRight className="w-3 h-3 text-blue-400 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
-                  </div>
+                  <span className="text-xs text-[#FEFCD9]/80 truncate">{room.id}</span>
+                  <span className="text-[10px] text-[#FEFCD9]/40 flex items-center gap-1">
+                    <Users className="w-3 h-3" />
+                    {room.userCount}
+                  </span>
                 </button>
               ))
             )}

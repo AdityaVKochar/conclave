@@ -65,8 +65,12 @@ export default function ControlsBar({
   const reactionMenuRef = useRef<HTMLDivElement>(null);
   const lastReactionTimeRef = useRef<number>(0);
   const REACTION_COOLDOWN_MS = 150;
-  const ghostDisabledClass =
-    "bg-[#1a1a1a] text-neutral-600 cursor-not-allowed";
+  
+  const baseButtonClass = "w-11 h-11 rounded-full flex items-center justify-center transition-all text-[#FEFCD9]/80 hover:text-[#FEFCD9] hover:bg-[#FEFCD9]/10";
+  const defaultButtonClass = baseButtonClass;
+  const activeButtonClass = `${baseButtonClass} !bg-[#F95F4A] !text-white`;
+  const mutedButtonClass = `${baseButtonClass} !text-[#F95F4A] !bg-[#F95F4A]/15`;
+  const ghostDisabledClass = `${baseButtonClass} !opacity-30 cursor-not-allowed`;
   const screenShareDisabled = isGhostMode || !canStartScreenShare;
 
   useEffect(() => {
@@ -98,20 +102,18 @@ export default function ControlsBar({
   );
 
   return (
-    <div className="flex justify-center gap-2 mt-4 shrink-0">
+    <div className="flex justify-center items-center gap-1 shrink-0 py-2 px-3 bg-black/40 backdrop-blur-sm rounded-full mx-auto"
+      style={{ fontFamily: "'PolySans Mono', monospace" }}
+    >
       {isAdmin && (
         <button
           onClick={onToggleParticipants}
-          className={`relative w-12 h-12 rounded-full transition-all duration-200 flex items-center justify-center ${
-            isParticipantsOpen
-              ? "bg-white text-black hover:bg-neutral-200"
-              : "bg-[#2a2a2a] text-white hover:bg-[#3a3a3a]"
-          }`}
+          className={`relative ${isParticipantsOpen ? activeButtonClass : defaultButtonClass}`}
           title="Participants"
         >
-          <Users className="w-5 h-5" />
+          <Users className="w-4 h-4" />
           {pendingUsersCount > 0 && (
-            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 text-xs font-medium bg-orange-500 text-white rounded-full flex items-center justify-center">
+            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 text-[10px] font-bold bg-[#F95F4A] text-white rounded-full flex items-center justify-center">
               {pendingUsersCount > 9 ? "9+" : pendingUsersCount}
             </span>
           )}
@@ -121,28 +123,28 @@ export default function ControlsBar({
       <button
         onClick={onToggleMute}
         disabled={isGhostMode}
-        className={`w-12 h-12 rounded-full transition-all duration-200 flex items-center justify-center ${
+        className={
           isGhostMode
             ? ghostDisabledClass
             : isMuted
-            ? "bg-red-500 text-white hover:bg-red-600"
-            : "bg-[#2a2a2a] text-white hover:bg-[#3a3a3a]"
-        }`}
+            ? mutedButtonClass
+            : defaultButtonClass
+        }
         title={isGhostMode ? "Ghost mode: mic locked" : isMuted ? "Unmute" : "Mute"}
       >
-        {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+        {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
       </button>
 
       <button
         onClick={onToggleCamera}
         disabled={isGhostMode}
-        className={`w-12 h-12 rounded-full transition-all duration-200 flex items-center justify-center ${
+        className={
           isGhostMode
             ? ghostDisabledClass
             : isCameraOff
-            ? "bg-red-500 text-white hover:bg-red-600"
-            : "bg-[#2a2a2a] text-white hover:bg-[#3a3a3a]"
-        }`}
+            ? mutedButtonClass
+            : defaultButtonClass
+        }
         title={
           isGhostMode
             ? "Ghost mode: camera locked"
@@ -152,22 +154,22 @@ export default function ControlsBar({
         }
       >
         {isCameraOff ? (
-          <VideoOff className="w-5 h-5" />
+          <VideoOff className="w-4 h-4" />
         ) : (
-          <Video className="w-5 h-5" />
+          <Video className="w-4 h-4" />
         )}
       </button>
 
       <button
         onClick={onToggleScreenShare}
         disabled={screenShareDisabled}
-        className={`w-12 h-12 rounded-full transition-all duration-200 flex items-center justify-center ${
+        className={
           isScreenSharing
-            ? "bg-white text-black hover:bg-neutral-200"
+            ? activeButtonClass
             : screenShareDisabled
             ? ghostDisabledClass
-            : "bg-[#2a2a2a] text-white hover:bg-[#3a3a3a]"
-        }`}
+            : defaultButtonClass
+        }
         title={
           isGhostMode
             ? "Ghost mode: screen share locked"
@@ -178,19 +180,19 @@ export default function ControlsBar({
             : "Share screen"
         }
       >
-        <Monitor className="w-5 h-5" />
+        <Monitor className="w-4 h-4" />
       </button>
 
       <button
         onClick={onToggleHandRaised}
         disabled={isGhostMode}
-        className={`w-12 h-12 rounded-full transition-all duration-200 flex items-center justify-center ${
+        className={
           isGhostMode
             ? ghostDisabledClass
             : isHandRaised
-            ? "bg-amber-400 text-black hover:bg-amber-300"
-            : "bg-[#2a2a2a] text-white hover:bg-[#3a3a3a]"
-        }`}
+            ? `${baseButtonClass} !bg-amber-400 !text-black`
+            : defaultButtonClass
+        }
         title={
           isGhostMode
             ? "Ghost mode: hand raise locked"
@@ -199,32 +201,32 @@ export default function ControlsBar({
             : "Raise hand"
         }
       >
-        <Hand className="w-5 h-5" />
+        <Hand className="w-4 h-4" />
       </button>
 
       <div ref={reactionMenuRef} className="relative">
         <button
           onClick={() => setIsReactionMenuOpen((prev) => !prev)}
           disabled={isGhostMode}
-          className={`w-12 h-12 rounded-full transition-all duration-200 flex items-center justify-center ${
+          className={
             isGhostMode
               ? ghostDisabledClass
               : isReactionMenuOpen
-              ? "bg-white text-black hover:bg-neutral-200"
-              : "bg-[#2a2a2a] text-white hover:bg-[#3a3a3a]"
-          }`}
+              ? activeButtonClass
+              : defaultButtonClass
+          }
           title={isGhostMode ? "Ghost mode: reactions locked" : "Reactions"}
         >
-          <Smile className="w-5 h-5" />
+          <Smile className="w-4 h-4" />
         </button>
 
         {isReactionMenuOpen && (
-          <div className="absolute bottom-14 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full border border-white/10 bg-[#1f1f1f] px-2 py-1 shadow-lg max-w-[320px] overflow-x-auto no-scrollbar">
+          <div className="absolute bottom-14 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full bg-black/90 backdrop-blur-md px-2 py-1.5 max-w-[300px] overflow-x-auto no-scrollbar">
             {reactionOptions.map((reaction) => (
               <button
                 key={reaction.id}
                 onClick={() => handleReactionClick(reaction)}
-                className="w-9 h-9 shrink-0 rounded-full text-xl hover:bg-white/10 transition-colors flex items-center justify-center"
+                className="w-8 h-8 shrink-0 rounded-full text-lg hover:bg-[#FEFCD9]/10 transition-all flex items-center justify-center hover:scale-110"
                 title={`React ${reaction.label}`}
               >
                 {reaction.kind === "emoji" ? (
@@ -233,7 +235,7 @@ export default function ControlsBar({
                   <img
                     src={reaction.value}
                     alt={reaction.label}
-                    className="w-6 h-6 object-contain"
+                    className="w-5 h-5 object-contain"
                     loading="lazy"
                   />
                 )}
@@ -245,30 +247,25 @@ export default function ControlsBar({
 
       <button
         onClick={onToggleChat}
-        className={`w-12 h-12 rounded-full transition-all duration-200 flex items-center justify-center relative ${
-          isChatOpen
-            ? "bg-white text-black hover:bg-neutral-200"
-            : "bg-[#2a2a2a] text-white hover:bg-[#3a3a3a]"
-        }`}
+        className={`relative ${isChatOpen ? activeButtonClass : defaultButtonClass}`}
         title="Chat"
       >
-        <MessageSquare className="w-5 h-5" />
+        <MessageSquare className="w-4 h-4" />
         {unreadCount > 0 && (
-          <span
-            className="absolute -top-1 -right-1 bg-white text-black text-[10px] min-w-[18px] h-[18px] rounded-full flex items-center justify-center tabular-nums"
-            style={{ fontWeight: 500 }}
-          >
+          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 text-[10px] font-bold bg-[#F95F4A] text-white rounded-full flex items-center justify-center">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
       </button>
 
+      <div className="w-px h-6 bg-[#FEFCD9]/10 mx-1" />
+
       <button
         onClick={onLeave}
-        className="w-12 h-12 rounded-full bg-red-500 hover:bg-red-600 text-white transition-all duration-200 flex items-center justify-center"
+        className={`${baseButtonClass} !text-red-400 hover:!bg-red-500/20`}
         title="Leave meeting"
       >
-        <Phone className="rotate-[135deg] w-5 h-5" />
+        <Phone className="rotate-[135deg] w-4 h-4" />
       </button>
     </div>
   );

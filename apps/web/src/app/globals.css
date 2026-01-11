@@ -2,8 +2,123 @@
 
 @tailwind utilities;
 
+/* ============================================================
+   ACM-VIT CONCLAVE DESIGN SYSTEM
+   Based on ACM-VIT Official Website
+   ============================================================ */
+
+/* ============================================================
+   FONT DEFINITIONS - PolySans Trial
+   ============================================================ */
+
+/* Standard Weights */
+@font-face {
+  font-family: "PolySans Trial";
+  src: url("/assets/fonts/PolySans-trial/PolySans-trial/Standard/PolySansTrial-Slim.otf") format("opentype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "PolySans Trial";
+  src: url("/assets/fonts/PolySans-trial/PolySans-trial/Standard/PolySansTrial-Neutral.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "PolySans Trial";
+  src: url("/assets/fonts/PolySans-trial/PolySans-trial/Standard/PolySansTrial-Median.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "PolySans Trial";
+  src: url("/assets/fonts/PolySans-trial/PolySans-trial/Standard/PolySansTrial-Bulky.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Mono Weights */
+@font-face {
+  font-family: "PolySans Slim";
+  src: url("/assets/fonts/PolySans-trial/PolySans-trial/Mono/PolySansTrial-SlimMono.otf") format("opentype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "PolySans Mono";
+  src: url("/assets/fonts/PolySans-trial/PolySans-trial/Mono/PolySansTrial-NeutralMono.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "PolySans Medium";
+  src: url("/assets/fonts/PolySans-trial/PolySans-trial/Mono/PolySansTrial-MedianMono.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "PolySans Bold";
+  src: url("/assets/fonts/PolySans-trial/PolySans-trial/Mono/PolySansTrial-BulkyMono.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Wide Weights - for bold display text */
+@font-face {
+  font-family: "PolySans Bulky Wide";
+  src: url("/assets/fonts/PolySans-trial/PolySans-trial/Wide/PolySansTrial-BulkyWide.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ============================================================
+   THEME COLORS
+   ============================================================ */
+@theme {
+  --color-primary-orange: #F95F4A;
+  --color-primary-pink: #FF007A;
+  --color-acm-cream: #FEFCD9;
+  --color-acm-dark: #060606;
+  --color-acm-dark-alt: #0d0e0d;
+  --color-acm-surface: #1a1a1a;
+  --color-acm-surface-light: #252525;
+  --color-acm-surface-hover: #2a2a2a;
+}
+
 :root {
   color-scheme: dark;
+  --font-polysans: "PolySans Trial", system-ui, sans-serif;
+  --font-polysans-mono: "PolySans Mono", monospace;
+  --font-polysans-wide: "PolySans Bulky Wide", sans-serif;
+}
+
+/* ============================================================
+   GLOBAL STYLES
+   ============================================================ */
+
+/* Global Selection Style - ACM Orange */
+::selection {
+  background: #f95f4a;
+  color: white;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 html,
@@ -13,8 +128,57 @@ body {
 
 body {
   margin: 0;
+  background-color: #060606;
+  font-family: "PolySans Trial", system-ui, -apple-system, sans-serif;
+  color: #FEFCD9;
 }
 
+/* ACM-VIT Style Input Focus */
+input:focus, textarea:focus, select:focus {
+  border-color: #F95F4A !important;
+  outline: none;
+}
+
+/* Pill Button Style */
+.acm-pill {
+  border-radius: 41px;
+  border: 1px solid #FEFCD9;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(4px);
+}
+
+/* Glowing accent */
+.acm-glow {
+  box-shadow: 0 0 20px rgba(249, 95, 74, 0.3);
+}
+
+.acm-glow-pink {
+  box-shadow: 0 0 20px rgba(255, 0, 122, 0.3);
+}
+
+/* Blinking cursor animation */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Status indicator pulse */
+@keyframes acm-pulse {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 8px 2px rgba(34, 197, 94, 0.6);
+  }
+  50% {
+    opacity: 0.7;
+    box-shadow: 0 0 12px 4px rgba(34, 197, 94, 0.4);
+  }
+}
+
+.acm-status-pulse {
+  animation: acm-pulse 1.5s ease-in-out infinite;
+}
+
+/* Participant animations */
 @keyframes meets-participant-join {
   0% {
     opacity: 0;
@@ -43,4 +207,388 @@ body {
 
 .animate-participant-leave {
   animation: meets-participant-leave 220ms ease-in;
+}
+
+/* ============================================================
+   ACM-VIT COMPONENT STYLES
+   ============================================================ */
+
+/* Header Pill Navigation - matching ACM-VIT */
+.acm-header-pill {
+  height: 50px;
+  border-radius: 41px;
+  border: 1px solid #FEFCD9;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 2rem;
+}
+
+/* Pill Button Style */
+.acm-pill {
+  border-radius: 41px;
+  border: 1px solid #FEFCD9;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(4px);
+}
+
+/* ACM Primary Button */
+.acm-btn-primary {
+  background: #F95F4A;
+  color: white;
+  font-family: "PolySans Trial", sans-serif;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: 41px;
+  padding: 0.75rem 2rem;
+  transition: all 0.25s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.acm-btn-primary:hover {
+  background: #e8553f;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(249, 95, 74, 0.4);
+}
+
+.acm-btn-primary:active {
+  transform: translateY(0);
+}
+
+/* ACM Ghost Button */
+.acm-btn-ghost {
+  background: transparent;
+  color: #FEFCD9;
+  font-family: "PolySans Trial", sans-serif;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: 41px;
+  padding: 0.75rem 2rem;
+  transition: all 0.25s ease;
+  border: 1px solid rgba(254, 252, 217, 0.3);
+  cursor: pointer;
+}
+
+.acm-btn-ghost:hover {
+  background: rgba(254, 252, 217, 0.1);
+  border-color: #FEFCD9;
+}
+
+/* Glowing accent */
+.acm-glow {
+  box-shadow: 0 0 30px rgba(249, 95, 74, 0.4);
+}
+
+.acm-glow-pink {
+  box-shadow: 0 0 30px rgba(255, 0, 122, 0.4);
+}
+
+/* Gradient text for headers */
+.acm-gradient-text {
+  background: linear-gradient(135deg, #F95F4A 0%, #FF007A 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Status indicator pulse - orange accent */
+@keyframes acm-pulse-orange {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(249, 95, 74, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(249, 95, 74, 0);
+  }
+}
+
+.acm-status-pulse {
+  animation: acm-pulse-orange 2s ease-in-out infinite;
+}
+
+/* Live indicator */
+.acm-live-indicator {
+  width: 8px;
+  height: 8px;
+  background: #22c55e;
+  border-radius: 50%;
+  animation: acm-pulse-live 1.5s ease-in-out infinite;
+}
+
+@keyframes acm-pulse-live {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.2);
+  }
+}
+
+/* ============================================================
+   ACM-VIT CONTROL BUTTONS
+   ============================================================ */
+.acm-control-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(254, 252, 217, 0.15);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  color: #FEFCD9;
+  cursor: pointer;
+}
+
+.acm-control-btn:hover {
+  background: rgba(26, 26, 26, 0.9);
+  border-color: rgba(254, 252, 217, 0.3);
+  transform: scale(1.08);
+}
+
+.acm-control-btn.active {
+  background: #F95F4A;
+  border-color: #F95F4A;
+  color: white;
+  box-shadow: 0 0 20px rgba(249, 95, 74, 0.4);
+}
+
+.acm-control-btn.danger {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+.acm-control-btn.danger:hover {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: white;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+}
+
+.acm-control-btn:disabled {
+  background: rgba(26, 26, 26, 0.3);
+  border-color: rgba(254, 252, 217, 0.05);
+  color: rgba(254, 252, 217, 0.2);
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ============================================================
+   ACM-VIT CASSETTE-STYLE CARD
+   ============================================================ */
+.acm-card {
+  position: relative;
+  background: #0d0e0d;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.acm-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(254, 252, 217, 0.2) 0%,
+    rgba(249, 95, 74, 0.3) 50%,
+    rgba(255, 0, 122, 0.2) 100%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Rotating border animation for featured cards */
+.acm-card-featured {
+  position: relative;
+  background: #0d0e0d;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.acm-card-featured::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 18px;
+  background: conic-gradient(
+    from var(--rotation, 0deg),
+    #F95F4A,
+    #FF007A,
+    #FEFCD9,
+    #F95F4A
+  );
+  animation: acm-rotate-border 4s linear infinite;
+  z-index: -1;
+}
+
+.acm-card-featured::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 14px;
+  background: #0d0e0d;
+  z-index: -1;
+}
+
+@keyframes acm-rotate-border {
+  from {
+    --rotation: 0deg;
+  }
+  to {
+    --rotation: 360deg;
+  }
+}
+
+@property --rotation {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+/* ============================================================
+   ACM-VIT INPUT STYLES
+   ============================================================ */
+.acm-input {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(254, 252, 217, 0.15);
+  border-radius: 12px;
+  padding: 0.875rem 1rem;
+  color: #FEFCD9;
+  font-family: "PolySans Trial", sans-serif;
+  font-size: 0.9375rem;
+  transition: all 0.25s ease;
+}
+
+.acm-input::placeholder {
+  color: rgba(254, 252, 217, 0.4);
+}
+
+.acm-input:focus {
+  outline: none;
+  border-color: #F95F4A;
+  box-shadow: 0 0 0 3px rgba(249, 95, 74, 0.15);
+}
+
+/* ============================================================
+   ACM-VIT TYPOGRAPHY
+   ============================================================ */
+.acm-heading-display {
+  font-family: "PolySans Bulky Wide", sans-serif;
+  font-weight: 700;
+  text-transform: lowercase;
+  line-height: 1.1;
+}
+
+.acm-heading {
+  font-family: "PolySans Trial", sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.acm-label {
+  font-family: "PolySans Mono", monospace;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(254, 252, 217, 0.6);
+}
+
+.acm-text-body {
+  font-family: "PolySans Trial", sans-serif;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+/* ============================================================
+   ACM-VIT BACKGROUND PATTERNS
+   ============================================================ */
+.acm-bg-pattern {
+  background-image: url("/assets/background_pattern.svg");
+  background-repeat: repeat;
+  background-size: 40px 40px;
+  opacity: 0.03;
+}
+
+.acm-bg-radial {
+  background: radial-gradient(
+    ellipse at 30% 20%,
+    rgba(249, 95, 74, 0.08) 0%,
+    transparent 50%
+  ),
+  radial-gradient(
+    ellipse at 70% 80%,
+    rgba(255, 0, 122, 0.06) 0%,
+    transparent 50%
+  );
+}
+
+/* Glow ball decorations */
+.acm-glow-ball {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(249, 95, 74, 0.3) 0%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(60px);
+  pointer-events: none;
+}
+
+.acm-glow-ball-pink {
+  background: radial-gradient(circle, rgba(255, 0, 122, 0.25) 0%, transparent 70%);
+}
+
+/* ============================================================
+   ACM-VIT VIDEO TILE
+   ============================================================ */
+.acm-video-tile {
+  position: relative;
+  background: #0d0e0d;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(254, 252, 217, 0.08);
+  transition: all 0.3s ease;
+}
+
+.acm-video-tile:hover {
+  border-color: rgba(254, 252, 217, 0.15);
+}
+
+.acm-video-tile.speaking {
+  border-color: #F95F4A;
+  box-shadow: 0 0 0 2px rgba(249, 95, 74, 0.3), 0 0 30px rgba(249, 95, 74, 0.2);
+}
+
+/* ============================================================
+   SCROLLBAR STYLES
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(254, 252, 217, 0.15);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(254, 252, 217, 0.25);
 }

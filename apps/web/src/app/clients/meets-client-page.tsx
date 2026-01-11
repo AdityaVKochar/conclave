@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useRef } from "react";
 import MeetsClient from "./meets-client";
 
 const reactionAssets = [
@@ -27,15 +27,9 @@ export default function MeetsClientPage() {
       : `guest-${Math.random().toString(36).slice(2, 10)}`
   );
 
-  const user = useMemo(
-    () => ({
-      id: userIdRef.current,
-      name: "Guest",
-    }),
-    []
-  );
+  const user = undefined;
 
-  const isAdmin = true;
+  const isAdmin = false;
 
   const getJoinInfo = useCallback(
     async (roomId: string, sessionId: string) => {
@@ -69,7 +63,7 @@ export default function MeetsClientPage() {
   );
 
   return (
-    <div className="w-full h-full bg-[#1a1a1a] overflow-auto relative">
+    <div className="w-full h-full min-h-screen bg-[#060606] overflow-auto relative">
       <MeetsClient
         getJoinInfo={getJoinInfo}
         getRooms={getRooms}

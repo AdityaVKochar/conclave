@@ -61,28 +61,34 @@ export default function ChatPanel({
 
   return (
     <div
-      className="absolute right-4 top-4 bottom-20 w-80 bg-[#1f1f1f] rounded-lg shadow-2xl flex flex-col border border-white/5 z-10"
-      style={{ fontFamily: "'Roboto', sans-serif" }}
+      className="fixed right-4 top-16 bottom-20 w-72 bg-[#0d0e0d]/95 backdrop-blur-md border border-[#FEFCD9]/10 rounded-xl flex flex-col z-40 shadow-2xl"
+      style={{ fontFamily: "'PolySans Trial', sans-serif" }}
     >
-      <div className="flex items-center justify-between p-3 border-b border-white/5">
-        <h3 className="text-sm tracking-[0.5px]" style={{ fontWeight: 700 }}>
+      <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#FEFCD9]/10">
+        <span 
+          className="text-[10px] uppercase tracking-[0.12em] text-[#FEFCD9]/60"
+          style={{ fontFamily: "'PolySans Mono', monospace" }}
+        >
           Chat
-        </h3>
+        </span>
         <button
           onClick={onClose}
-          className="p-1 hover:bg-white/10 rounded transition-colors text-neutral-400 hover:text-white"
+          className="w-6 h-6 rounded flex items-center justify-center text-[#FEFCD9]/50 hover:text-[#FEFCD9] hover:bg-[#FEFCD9]/10 transition-all"
         >
-          <X className="w-5 h-5" />
+          <X className="w-3.5 h-3.5" />
         </button>
       </div>
 
+      {/* Messages */}
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto p-3 space-y-3"
+        className="flex-1 overflow-y-auto px-3 py-2 space-y-2"
       >
         {messages.length === 0 ? (
-          <p className="text-gray-500 text-center text-sm">No messages yet</p>
+          <div className="flex items-center justify-center h-full text-[#FEFCD9]/30 text-xs">
+            No messages yet
+          </div>
         ) : (
           messages.map((msg) => {
             const isOwn = msg.userId === currentUserId;
@@ -90,25 +96,21 @@ export default function ChatPanel({
             return (
               <div
                 key={msg.id}
-                className={`flex flex-col ${
-                  isOwn ? "items-end" : "items-start"
-                }`}
+                className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}
               >
                 <div
-                  className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+                  className={`max-w-[85%] rounded-lg px-2.5 py-1.5 ${
                     isOwn
-                      ? "bg-white text-black"
-                      : "bg-[#2a2a2a] text-neutral-200 border border-white/5"
+                      ? "bg-[#F95F4A] text-white"
+                      : "bg-[#1a1a1a] text-[#FEFCD9]/90"
                   }`}
                 >
                   {!isOwn && (
-                    <p className="text-xs text-gray-400 mb-1">
-                      {displayName}
-                    </p>
+                    <p className="text-[9px] text-[#F95F4A]/80 mb-0.5">{displayName}</p>
                   )}
-                  <p className="text-sm break-words">{msg.content}</p>
+                  <p className="text-xs break-words leading-relaxed">{msg.content}</p>
                 </div>
-                <span className="text-xs text-gray-500 mt-1 tabular-nums">
+                <span className="text-[9px] text-[#FEFCD9]/20 mt-0.5 tabular-nums">
                   {new Date(msg.timestamp).toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
@@ -121,32 +123,33 @@ export default function ChatPanel({
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Input */}
       <form
         onSubmit={handleSubmit}
-        className="p-3 border-t border-white/5 bg-[#1f1f1f]"
+        className="p-2 border-t border-[#FEFCD9]/5"
       >
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           <input
             type="text"
             value={chatInput}
             onChange={(e) => onInputChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message..."
+            placeholder="Message..."
             maxLength={1000}
             disabled={isGhostMode}
-            className="flex-1 px-3 py-2 bg-[#2a2a2a] border border-white/5 rounded-md text-sm focus:outline-none focus:border-white/30 transition-colors placeholder:text-neutral-600 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex-1 px-2.5 py-1.5 bg-black/30 border border-[#FEFCD9]/10 rounded-md text-xs text-[#FEFCD9] placeholder:text-[#FEFCD9]/30 focus:outline-none focus:border-[#FEFCD9]/20 disabled:opacity-50"
           />
           <button
             type="submit"
             disabled={isGhostMode || !chatInput.trim()}
-            className="p-2 bg-white text-black hover:bg-neutral-200 disabled:bg-neutral-800 disabled:text-neutral-500 disabled:cursor-not-allowed rounded-md transition-colors"
+            className="w-8 h-8 rounded-md flex items-center justify-center text-[#FEFCD9]/60 hover:text-[#FEFCD9] hover:bg-[#FEFCD9]/10 disabled:opacity-30 transition-all"
           >
-            <Send className="w-4 h-4" />
+            <Send className="w-3.5 h-3.5" />
           </button>
         </div>
         {isGhostMode && (
-          <div className="mt-2 text-[11px] text-white/40">
-            Ghost mode is on. Chat is disabled.
+          <div className="mt-1.5 text-[9px] text-[#FF007A]/60 text-center">
+            Ghost mode
           </div>
         )}
       </form>

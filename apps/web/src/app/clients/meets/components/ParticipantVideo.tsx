@@ -97,10 +97,14 @@ export default function ParticipantVideo({
     }
   };
 
+  const speakerHighlight = isActiveSpeaker 
+    ? "speaking" 
+    : "";
+
   return (
     <div
       onClick={handleClick}
-      className={`relative bg-[#111] border rounded-lg overflow-hidden ${
+      className={`acm-video-tile ${
         compact ? "h-36 shrink-0" : "w-full h-full"
       } ${
         isNew
@@ -108,11 +112,10 @@ export default function ParticipantVideo({
           : participant.isLeaving
           ? "animate-participant-leave"
           : ""
-      } transition-all duration-200 ${getSpeakerHighlightClasses(
-        isActiveSpeaker
-      )} border-white/10 ${
-        isAdmin && onAdminClick ? "cursor-pointer hover:border-white/20" : ""
+      } ${speakerHighlight} ${
+        isAdmin && onAdminClick ? "cursor-pointer hover:border-[#F95F4A]/40" : ""
       }`}
+      style={{ fontFamily: "'PolySans Trial', sans-serif" }}
     >
       <video
         ref={setVideoRef}
@@ -123,10 +126,10 @@ export default function ParticipantVideo({
         }`}
       />
       {showPlaceholder && (
-        <div className="absolute inset-0 flex items-center justify-center bg-[#252525]">
+        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#1a1a1a] to-[#0d0e0d]">
           <div
-            className={`rounded-full bg-[#333] border border-white/10 flex items-center justify-center ${
-              compact ? "w-10 h-10 text-lg" : "w-16 h-16 text-2xl"
+            className={`rounded-full bg-gradient-to-br from-[#F95F4A]/20 to-[#FF007A]/20 border border-[#FEFCD9]/20 flex items-center justify-center text-[#FEFCD9] font-bold ${
+              compact ? "w-12 h-12 text-lg" : "w-20 h-20 text-3xl"
             }`}
           >
             {displayName[0]?.toUpperCase() || "?"}
@@ -134,7 +137,7 @@ export default function ParticipantVideo({
         </div>
       )}
       {participant.isGhost && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/40">
           <div
             className={`flex flex-col items-center ${
               compact ? "gap-1" : "gap-2"
@@ -143,12 +146,12 @@ export default function ParticipantVideo({
             <Ghost
               className={`${
                 compact ? "w-10 h-10" : "w-16 h-16"
-              } text-blue-300 drop-shadow-[0_0_20px_rgba(59,130,246,0.45)]`}
+              } text-[#FF007A] drop-shadow-[0_0_20px_rgba(255,0,122,0.5)]`}
             />
             <span
               className={`${
                 compact ? "text-[9px]" : "text-xs"
-              } text-blue-200/90 bg-black/60 border border-blue-400/30 px-2 py-0.5 rounded-full`}
+              } text-[#FF007A] bg-black/60 border border-[#FF007A]/30 px-3 py-1 rounded-full uppercase tracking-wider font-medium`}
             >
               Ghost
             </span>
@@ -158,8 +161,8 @@ export default function ParticipantVideo({
       <audio ref={setAudioRef} autoPlay />
       {participant.isHandRaised && (
         <div
-          className={`absolute top-2 left-2 rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-300 ${
-            compact ? "p-1" : "p-1.5"
+          className={`absolute top-3 left-3 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.3)] ${
+            compact ? "p-1.5" : "p-2"
           }`}
           title="Hand raised"
         >
@@ -167,16 +170,17 @@ export default function ParticipantVideo({
         </div>
       )}
       <div
-        className={`absolute bottom-2 left-2 bg-black/60 border border-white/5 rounded px-2 py-0.5 flex items-center gap-2 ${
+        className={`absolute bottom-3 left-3 bg-black/70 backdrop-blur-sm border border-[#FEFCD9]/10 rounded-full px-3 py-1.5 flex items-center gap-2 ${
           compact ? "text-[10px]" : "text-xs"
         }`}
+        style={{ fontFamily: "'PolySans Mono', monospace" }}
       >
-        <span style={{ fontWeight: 500 }}>{displayName}</span>
-        {participant.isMuted && <MicOff className="w-3 h-3 text-red-500" />}
+        <span className="font-medium text-[#FEFCD9] uppercase tracking-wide">{displayName}</span>
+        {participant.isMuted && <MicOff className="w-3 h-3 text-[#F95F4A]" />}
       </div>
       {isAdmin && onAdminClick && (
-        <div className="absolute top-2 right-2 p-1.5 bg-black/60 rounded-full transition-opacity">
-          <Info className="w-4 h-4 text-white/70" />
+        <div className="absolute top-3 right-3 p-2 bg-black/60 backdrop-blur-sm rounded-full border border-[#FEFCD9]/10 transition-all hover:border-[#F95F4A]/40">
+          <Info className="w-4 h-4 text-[#FEFCD9]/70" />
         </div>
       )}
     </div>

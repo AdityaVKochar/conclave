@@ -13,14 +13,19 @@ export default function MeetsErrorBanner({
   onDismiss,
 }: MeetsErrorBannerProps) {
   return (
-    <div className="p-3 bg-red-900/50 border-b border-red-700 flex items-center justify-between">
-      <div className="flex items-center gap-2 text-red-200">
-        <AlertCircle className="w-4 h-4" />
-        <span>{meetError.message}</span>
+    <div 
+      className="px-6 py-4 bg-[#F95F4A]/10 border-b border-[#F95F4A]/30 flex items-center justify-between backdrop-blur-sm"
+      style={{ fontFamily: "'PolySans Trial', sans-serif" }}
+    >
+      <div className="flex items-center gap-3 text-[#F95F4A]">
+        <div className="p-1.5 rounded-full bg-[#F95F4A]/20">
+          <AlertCircle className="w-4 h-4" />
+        </div>
+        <span className="text-sm">{meetError.message}</span>
       </div>
       <button
         onClick={onDismiss}
-        className="p-1 hover:bg-red-800/50 rounded-full transition-colors text-red-200"
+        className="acm-control-btn !w-8 !h-8 !bg-[#F95F4A]/10 !border-[#F95F4A]/30 !text-[#F95F4A]"
         title="Dismiss error"
       >
         <X className="w-4 h-4" />

@@ -72,12 +72,15 @@ export default function GridLayout({
 
   const gridClass = getGridLayout(totalParticipants);
 
+  const localSpeakerHighlight = isLocalActiveSpeaker 
+    ? "speaking" 
+    : "";
+
   return (
-    <div className={`flex-1 grid ${gridClass} gap-3 overflow-auto p-2`}>
+    <div className={`flex-1 grid ${gridClass} gap-3 overflow-auto p-4`}>
       <div
-        className={`relative bg-[#111] border border-white/10 rounded-lg overflow-hidden transition-all duration-200 ${getSpeakerHighlightClasses(
-          isLocalActiveSpeaker
-        )}`}
+        className={`acm-video-tile ${localSpeakerHighlight}`}
+        style={{ fontFamily: "'PolySans Trial', sans-serif" }}
       >
         <video
           ref={localVideoRef}
@@ -89,17 +92,20 @@ export default function GridLayout({
           } ${isMirrorCamera ? "scale-x-[-1]" : ""}`}
         />
         {isCameraOff && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#252525]">
-            <div className="w-16 h-16 rounded-full bg-[#333] border border-white/10 flex items-center justify-center text-xl">
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#1a1a1a] to-[#0d0e0d]">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#F95F4A]/20 to-[#FF007A]/20 border border-[#FEFCD9]/20 flex items-center justify-center text-3xl text-[#FEFCD9] font-bold">
               {userEmail[0]?.toUpperCase() || "?"}
             </div>
           </div>
         )}
         {isGhost && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/40">
             <div className="flex flex-col items-center gap-2">
-              <Ghost className="w-16 h-16 text-blue-300 drop-shadow-[0_0_22px_rgba(59,130,246,0.5)]" />
-              <span className="text-xs text-blue-200/90 bg-black/60 border border-blue-400/30 px-2 py-0.5 rounded-full">
+              <Ghost className="w-16 h-16 text-[#FF007A] drop-shadow-[0_0_22px_rgba(255,0,122,0.5)]" />
+              <span 
+                className="text-[11px] text-[#FF007A] bg-black/60 border border-[#FF007A]/30 px-3 py-1 rounded-full uppercase tracking-[0.1em]"
+                style={{ fontFamily: "'PolySans Mono', monospace" }}
+              >
                 Ghost
               </span>
             </div>
@@ -107,17 +113,17 @@ export default function GridLayout({
         )}
         {isHandRaised && (
           <div
-            className="absolute top-2 left-2 p-1.5 rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-300"
+            className="absolute top-3 left-3 p-2 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.3)]"
             title="Hand raised"
           >
             <Hand className="w-4 h-4" />
           </div>
         )}
-        <div
-          className="absolute bottom-2 left-2 px-2 py-0.5 bg-black/60 border border-white/5 rounded text-sm flex items-center gap-2"
-          style={{ fontWeight: 500 }}
+        <div 
+          className="absolute bottom-3 left-3 px-3 py-1.5 bg-black/70 backdrop-blur-sm border border-[#FEFCD9]/10 rounded-full text-xs flex items-center gap-2 text-[#FEFCD9] uppercase tracking-wide"
+          style={{ fontFamily: "'PolySans Mono', monospace" }}
         >
-          You {isMuted && <MicOff className="w-3 h-3 text-red-500" />}
+          You {isMuted && <MicOff className="w-3 h-3 text-[#F95F4A]" />}
         </div>
       </div>
 

@@ -29,6 +29,11 @@ interface MeetsMainContentProps {
   setRoomId: Dispatch<SetStateAction<string>>;
   joinRoom: () => void;
   joinRoomById: (roomId: string) => void;
+  user?: {
+    id?: string;
+    email?: string | null;
+    name?: string | null;
+  };
   userEmail: string;
   isAdmin: boolean;
   showPermissionHint: boolean;
@@ -79,6 +84,8 @@ interface MeetsMainContentProps {
   resolveDisplayName: (userId: string) => string;
   reactions: ReactionEvent[];
   getRoomsForRedirect?: ParticipantsPanelGetRooms;
+  onUserChange: (user: { id: string; email: string; name: string } | null) => void;
+  onIsAdminChange: (isAdmin: boolean) => void;
 }
 
 export default function MeetsMainContent({
@@ -89,6 +96,7 @@ export default function MeetsMainContent({
   setRoomId,
   joinRoom,
   joinRoomById,
+  user,
   userEmail,
   isAdmin,
   showPermissionHint,
@@ -139,6 +147,8 @@ export default function MeetsMainContent({
   resolveDisplayName,
   reactions,
   getRoomsForRedirect,
+  onUserChange,
+  onIsAdminChange,
 }: MeetsMainContentProps) {
   return (
     <div className="flex-1 flex flex-col p-4 overflow-hidden relative">
@@ -154,6 +164,7 @@ export default function MeetsMainContent({
           onRoomIdChange={setRoomId}
           onJoin={joinRoom}
           isLoading={isLoading}
+          user={user}
           userEmail={userEmail}
           connectionState={connectionState}
           isAdmin={isAdmin}
@@ -166,6 +177,8 @@ export default function MeetsMainContent({
           onDisplayNameInputChange={setDisplayNameInput}
           isGhostMode={ghostEnabled}
           onGhostModeChange={setIsGhostMode}
+          onUserChange={onUserChange}
+          onIsAdminChange={onIsAdminChange}
         />
       ) : presentationStream ? (
         <PresentationLayout
