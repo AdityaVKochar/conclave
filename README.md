@@ -1,4 +1,4 @@
-<div align="center"> 
+<div align="center">  
 
 ![Forktober GIF](https://raw.githubusercontent.com/ACM-VIT/.github/master/profile/acm_gif_banner.gif)
 
