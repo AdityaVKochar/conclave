@@ -369,7 +369,7 @@ export default function MeetsClient({
     const waitingTitle = waitingMessage ?? "Waiting for host to let you in";
     const waitingIntro = waitingMessage
       ? "The host left the room, so there is no one available to admit you right now."
-      : "Hang tight—wait for the host to admit you.";
+      : "Hang tight.";
     return (
       <MeetsWaitingScreen
         waitingTitle={waitingTitle}
