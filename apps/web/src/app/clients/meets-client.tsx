@@ -397,9 +397,12 @@ export default function MeetsClient({
 
   if (connectionState === "waiting") {
     const waitingTitle = waitingMessage ?? "Waiting for host to let you in";
-    const waitingIntro = waitingMessage
-      ? "The host left the room, so there is no one available to admit you right now."
-      : "Hang tight.";
+    const isLockedRoom = waitingMessage?.toLowerCase().includes("locked");
+    const waitingIntro = isLockedRoom
+      ? "Please wait while the host reviews your request."
+      : waitingMessage
+        ? "The host left the room, so there is no one available to admit you right now."
+        : "Hang tight.";
     return (
       <MeetsWaitingScreen
         waitingTitle={waitingTitle}
