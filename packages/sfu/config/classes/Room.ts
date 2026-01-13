@@ -32,6 +32,7 @@ export class Room {
   public userKeysById: Map<string, string> = new Map();
   public displayNamesByKey: Map<string, string> = new Map();
   public handRaisedByUserId: Set<string> = new Set();
+  public lockedAllowedUsers: Set<string> = new Set();
   public cleanupTimer: NodeJS.Timeout | null = null;
   public hostUserKey: string | null = null;
   private _isLocked: boolean = false;
@@ -220,6 +221,9 @@ export class Room {
 
   setLocked(locked: boolean): void {
     this._isLocked = locked;
+    if (locked) {
+      this.lockedAllowedUsers.clear();
+    }
   }
 
   getAdmins(): Admin[] {
@@ -317,6 +321,15 @@ export class Room {
 
   isAllowed(userKey: string): boolean {
     return this.allowedUsers.has(userKey);
+  }
+
+  allowLockedUser(userKey: string) {
+    this.lockedAllowedUsers.add(userKey);
+    this.pendingClients.delete(userKey);
+  }
+
+  isLockedAllowed(userKey: string): boolean {
+    return this.lockedAllowedUsers.has(userKey);
   }
 }
 

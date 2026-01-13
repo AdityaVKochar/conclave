@@ -93,8 +93,10 @@ export const registerJoinRoomHandler = (context: ConnectionContext): void => {
         const isGhost = Boolean(data?.ghost) && Boolean(isHost);
         context.currentUserKey = userKey;
 
-        if (!isReturningPrimaryHost && room.isLocked) {
-          Logger.info(`User ${userKey} trying to join locked room ${roomId}, adding to waiting room`);
+        if (!isHost && room.isLocked && !room.isLockedAllowed(userKey)) {
+          Logger.info(
+            `User ${userKey} trying to join locked room ${roomId}, adding to waiting room`,
+          );
           room.addPendingClient(userKey, userId, socket, displayName);
           context.pendingRoomId = roomId;
           context.pendingRoomChannelId = roomChannelId;

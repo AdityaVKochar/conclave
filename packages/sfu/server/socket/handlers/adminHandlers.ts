@@ -138,6 +138,9 @@ export const registerAdminHandlers = (
       Logger.info(
         `Admin admitted user ${pending.userKey} to room ${options.roomId}`,
       );
+      if (context.currentRoom.isLocked) {
+        context.currentRoom.allowLockedUser(pending.userKey);
+      }
       context.currentRoom.allowUser(pending.userKey);
       pending.socket.emit("joinApproved");
 
