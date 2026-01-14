@@ -116,6 +116,13 @@ export class ContainerManager {
 
         try {
             const containerName = `conclave-browser-${this.sanitizeContainerName(roomId)}`;
+
+            try {
+                const existingContainer = this.docker.getContainer(containerName);
+                await existingContainer.remove({ force: true });
+            } catch (e) {
+            }
+
             const containerEnv = [
                 `START_URL=${url}`,
                 "RESOLUTION=1280x720x24",
