@@ -2,6 +2,15 @@
 
 start_chromium() {
     echo "Starting Chromium..."
+    if [[ -n "${PULSE_SERVER:-}" ]]; then
+        socket="${PULSE_SERVER#unix:}"
+        for i in {1..20}; do
+            if [[ -S "$socket" ]]; then
+                break
+            fi
+            sleep 0.2
+        done
+    fi
     /usr/bin/chromium \
         --no-sandbox \
         --disable-gpu \
