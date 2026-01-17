@@ -3,6 +3,7 @@
 import { Ghost, Hand, MicOff } from "lucide-react";
 import { memo, useEffect, useRef } from "react";
 import type { Participant } from "../../types";
+import { truncateDisplayName } from "../../utils";
 
 interface MobileParticipantVideoProps {
   participant: Participant;
@@ -76,6 +77,10 @@ function MobileParticipantVideo({
   const speakerRing = isActiveSpeaker
     ? "ring-2 ring-[#F95F4A] ring-offset-2 ring-offset-[#1a1a1a]"
     : "";
+  const displayLabel = truncateDisplayName(
+    displayName,
+    size === "featured" ? 16 : size === "large" ? 14 : 12
+  );
 
   return (
     <div
@@ -110,10 +115,15 @@ function MobileParticipantVideo({
       {size !== "small" && (
         <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-between">
           <div className="bg-black/70 backdrop-blur-sm rounded-full px-2 py-0.5 flex items-center gap-1.5 max-w-[80%]">
-            <span className="text-[10px] text-[#FEFCD9] font-medium truncate uppercase tracking-wide">
-              {displayName}
+            <span
+              className="text-[10px] text-[#FEFCD9] font-medium truncate uppercase tracking-wide"
+              title={displayName}
+            >
+              {displayLabel}
             </span>
-            {participant.isMuted && <MicOff className="w-2.5 h-2.5 text-[#F95F4A] shrink-0" />}
+            {participant.isMuted && (
+              <MicOff className="w-2.5 h-2.5 text-[#F95F4A] shrink-0" />
+            )}
           </div>
         </div>
       )}

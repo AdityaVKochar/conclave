@@ -3,7 +3,7 @@
 import { Ghost, Hand, Info, MicOff } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import type { Participant } from "../types";
-import { getSpeakerHighlightClasses } from "../utils";
+import { truncateDisplayName } from "../utils";
 
 interface ParticipantVideoProps {
   participant: Participant;
@@ -29,6 +29,8 @@ function ParticipantVideo({
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isNew, setIsNew] = useState(true);
+  const labelWidthClass = compact ? "max-w-[65%]" : "max-w-[75%]";
+  const displayLabel = truncateDisplayName(displayName, compact ? 12 : 18);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsNew(false), 800);
@@ -170,13 +172,18 @@ function ParticipantVideo({
         </div>
       )}
       <div
-        className={`absolute bottom-3 left-3 bg-black/70 backdrop-blur-sm border border-[#FEFCD9]/10 rounded-full px-3 py-1.5 flex items-center gap-2 ${
+        className={`absolute bottom-3 left-3 bg-black/70 backdrop-blur-sm border border-[#FEFCD9]/10 rounded-full px-3 py-1.5 flex items-center gap-2 ${labelWidthClass} ${
           compact ? "text-[10px]" : "text-xs"
         }`}
         style={{ fontFamily: "'PolySans Mono', monospace" }}
       >
-        <span className="font-medium text-[#FEFCD9] uppercase tracking-wide">{displayName}</span>
-        {participant.isMuted && <MicOff className="w-3 h-3 text-[#F95F4A]" />}
+        <span
+          className="font-medium text-[#FEFCD9] uppercase tracking-wide truncate"
+          title={displayName}
+        >
+          {displayLabel}
+        </span>
+        {participant.isMuted && <MicOff className="w-3 h-3 text-[#F95F4A] shrink-0" />}
       </div>
       {isAdmin && onAdminClick && (
         <div className="absolute top-3 right-3 p-2 bg-black/60 backdrop-blur-sm rounded-full border border-[#FEFCD9]/10 transition-all hover:border-[#F95F4A]/40">

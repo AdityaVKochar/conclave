@@ -48,6 +48,7 @@ interface MobileControlsBarProps {
   onToggleLock?: () => void;
   isBrowserActive?: boolean;
   isBrowserLaunching?: boolean;
+  showBrowserControls?: boolean;
   onLaunchBrowser?: (url: string) => Promise<boolean>;
   onNavigateBrowser?: (url: string) => Promise<boolean>;
   onCloseBrowser?: () => Promise<boolean>;
@@ -81,6 +82,7 @@ function MobileControlsBar({
   onToggleLock,
   isBrowserActive = false,
   isBrowserLaunching = false,
+  showBrowserControls = true,
   onLaunchBrowser,
   onNavigateBrowser,
   onCloseBrowser,
@@ -241,7 +243,9 @@ function MobileControlsBar({
               </div>
               <span className="text-sm font-medium">{isScreenSharing ? "Stop sharing" : "Share screen"}</span>
             </button>
-            {isAdmin && (onLaunchBrowser || onNavigateBrowser || onCloseBrowser) && (
+            {showBrowserControls &&
+              isAdmin &&
+              (onLaunchBrowser || onNavigateBrowser || onCloseBrowser) && (
               <button
                 onClick={() => {
                   setIsMoreMenuOpen(false);
@@ -262,7 +266,9 @@ function MobileControlsBar({
                 </span>
               </button>
             )}
-            {(hasBrowserAudio || isBrowserActive) && onToggleBrowserAudio && (
+            {showBrowserControls &&
+              (hasBrowserAudio || isBrowserActive) &&
+              onToggleBrowserAudio && (
               <button
                 onClick={() => {
                   onToggleBrowserAudio();
@@ -318,7 +324,7 @@ function MobileControlsBar({
         </div>
       )}
 
-      {isBrowserSheetOpen && (
+      {showBrowserControls && isBrowserSheetOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-50 animate-fade-in"
           onClick={() => {

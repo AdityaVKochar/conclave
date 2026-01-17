@@ -190,6 +190,20 @@ export function formatDisplayName(raw: string): string {
   return words.length > 0 ? words.join(" ") : handle || raw;
 }
 
+export function truncateDisplayName(value: string, maxLength = 16): string {
+  const trimmed = value.trim();
+  if (trimmed.length <= maxLength) return trimmed;
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    const first = parts[0];
+    const lastInitial = parts[parts.length - 1]?.[0];
+    const combined = lastInitial ? `${first} ${lastInitial}.` : first;
+    if (combined.length <= maxLength) return combined;
+  }
+  const sliceLength = Math.max(0, maxLength - 3);
+  return `${trimmed.slice(0, sliceLength).trimEnd()}...`;
+}
+
 export function normalizeDisplayName(value: string): string {
   return value.trim().replace(/\s+/g, " ");
 }

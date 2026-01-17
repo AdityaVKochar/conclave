@@ -3,7 +3,7 @@
 import { Ghost, Hand, MicOff } from "lucide-react";
 import { memo, useEffect, useRef } from "react";
 import type { Participant } from "../../types";
-import { isSystemUserId } from "../../utils";
+import { isSystemUserId, truncateDisplayName } from "../../utils";
 
 interface MobileGridLayoutProps {
   localStream: MediaStream | null;
@@ -65,6 +65,7 @@ function MobileGridLayout({
 
   const speakerRing = (isActive: boolean) =>
     isActive ? "ring-2 ring-[#F95F4A]" : "";
+  const maxLabelLength = totalCount <= 2 ? 16 : totalCount <= 4 ? 12 : 10;
 
   return (
     <div className={`w-full h-full grid ${getGridClass()} gap-1.5 p-2 auto-rows-fr`}>
@@ -115,7 +116,10 @@ function MobileGridLayout({
         <ParticipantTile
           key={participant.userId}
           participant={participant}
-          displayName={getDisplayName(participant.userId)}
+          displayName={truncateDisplayName(
+            getDisplayName(participant.userId),
+            maxLabelLength
+          )}
           isActiveSpeaker={activeSpeakerId === participant.userId}
           totalCount={totalCount}
         />

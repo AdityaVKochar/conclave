@@ -4,7 +4,7 @@ import { Ghost, Hand, MicOff, X } from "lucide-react";
 import { memo } from "react";
 import type { Socket } from "socket.io-client";
 import type { Participant } from "../../types";
-import { isSystemUserId } from "../../utils";
+import { isSystemUserId, truncateDisplayName } from "../../utils";
 
 interface MobileParticipantsPanelProps {
   participants: Map<string, Participant>;
@@ -29,6 +29,8 @@ function MobileParticipantsPanel({
     (participant) => !isSystemUserId(participant.userId)
   );
   const pendingArray = Array.from(pendingUsers.entries());
+  const formatName = (value: string, maxLength = 18) =>
+    truncateDisplayName(value, maxLength);
 
   const handleAdmit = (userId: string) => {
     socket?.emit("admitUser", { userId });
@@ -73,7 +75,9 @@ function MobileParticipantsPanel({
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#F95F4A]/20 to-[#FF007A]/20 border border-[#FEFCD9]/20 flex items-center justify-center text-[#FEFCD9] font-bold">
                       {displayName[0]?.toUpperCase() || "?"}
                     </div>
-                    <span className="text-sm text-[#FEFCD9]">{displayName}</span>
+                    <span className="text-sm text-[#FEFCD9]" title={displayName}>
+                      {formatName(displayName)}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -109,7 +113,7 @@ function MobileParticipantsPanel({
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-[#FEFCD9]">
-                    {getDisplayName(currentUserId)}
+                    {formatName(getDisplayName(currentUserId), 16)}
                   </span>
                   <span className="text-[9px] text-[#F95F4A]/60 uppercase">(You)</span>
                 </div>
@@ -132,7 +136,7 @@ function MobileParticipantsPanel({
                 </div>
                 <div className="flex-1 min-w-0">
                   <span className="text-sm text-[#FEFCD9] truncate block">
-                    {getDisplayName(participant.userId)}
+                    {formatName(getDisplayName(participant.userId), 16)}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">

@@ -3,7 +3,7 @@
 import { Ghost, MicOff } from "lucide-react";
 import { memo, useEffect, useRef } from "react";
 import type { Participant } from "../../types";
-import { isSystemUserId } from "../../utils";
+import { isSystemUserId, truncateDisplayName } from "../../utils";
 
 interface MobilePresentationLayoutProps {
   presentationStream: MediaStream;
@@ -141,7 +141,7 @@ function MobilePresentationLayout({
               style={{ fontFamily: "'PolySans Mono', monospace" }}
             >
               <span className="bg-black/70 border border-[#FEFCD9]/10 rounded-full px-1.5 py-0.5 text-[10px] text-[#FEFCD9] font-medium uppercase tracking-wide truncate max-w-full flex items-center gap-1">
-                {getDisplayName(participant.userId).split(" ")[0]}
+                {truncateDisplayName(getDisplayName(participant.userId), 10)}
                 {participant.isMuted && <MicOff className="w-2.5 h-2.5 text-[#F95F4A]" />}
               </span>
             </div>

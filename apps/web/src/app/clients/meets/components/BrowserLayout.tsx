@@ -226,7 +226,7 @@ function BrowserLayout({
                 </div>
             </div>
 
-            <div className="w-64 shrink-0 flex flex-col gap-3 overflow-y-auto pr-1">
+            <div className="w-64 shrink-0 flex flex-col gap-3 overflow-y-auto overflow-x-visible px-1">
                 <div
                     className={`relative bg-[#252525] border border-white/5 rounded-lg overflow-hidden h-36 shrink-0 transition-all duration-200 ${getSpeakerHighlightClasses(
                         isLocalActiveSpeaker

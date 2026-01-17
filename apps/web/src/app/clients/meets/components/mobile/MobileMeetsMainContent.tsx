@@ -91,6 +91,7 @@ interface MobileMeetsMainContentProps {
   browserState?: BrowserState;
   isBrowserLaunching?: boolean;
   browserLaunchError?: string | null;
+  showBrowserControls?: boolean;
   onLaunchBrowser?: (url: string) => Promise<boolean>;
   onNavigateBrowser?: (url: string) => Promise<boolean>;
   onCloseBrowser?: () => Promise<boolean>;
@@ -166,6 +167,7 @@ function MobileMeetsMainContent({
   browserState,
   isBrowserLaunching,
   browserLaunchError,
+  showBrowserControls = true,
   onLaunchBrowser,
   onNavigateBrowser,
   onCloseBrowser,
@@ -180,14 +182,27 @@ function MobileMeetsMainContent({
   onTestSpeaker,
 }: MobileMeetsMainContentProps) {
   const handleToggleParticipants = useCallback(
-    () => setIsParticipantsOpen((prev) => !prev),
-    [setIsParticipantsOpen]
+    () =>
+      setIsParticipantsOpen((prev) => {
+        const next = !prev;
+        if (next && isChatOpen) {
+          toggleChat();
+        }
+        return next;
+      }),
+    [isChatOpen, setIsParticipantsOpen, toggleChat]
   );
 
   const handleCloseParticipants = useCallback(
     () => setIsParticipantsOpen(false),
     [setIsParticipantsOpen]
   );
+  const handleToggleChat = useCallback(() => {
+    if (!isChatOpen && isParticipantsOpen) {
+      setIsParticipantsOpen(false);
+    }
+    toggleChat();
+  }, [isChatOpen, isParticipantsOpen, setIsParticipantsOpen, toggleChat]);
   const visibleParticipantCount = useMemo(
     () =>
       Array.from(participants.values()).filter(
@@ -389,7 +404,7 @@ function MobileMeetsMainContent({
         onToggleMute={toggleMute}
         onToggleCamera={toggleCamera}
         onToggleScreenShare={toggleScreenShare}
-        onToggleChat={toggleChat}
+        onToggleChat={handleToggleChat}
         onToggleHandRaised={toggleHandRaised}
         onSendReaction={sendReaction}
         onLeave={leaveRoom}
@@ -402,6 +417,7 @@ function MobileMeetsMainContent({
         onToggleLock={onToggleLock}
         isBrowserActive={browserState?.active ?? false}
         isBrowserLaunching={isBrowserLaunching}
+        showBrowserControls={showBrowserControls}
         onLaunchBrowser={onLaunchBrowser}
         onNavigateBrowser={onNavigateBrowser}
         onCloseBrowser={onCloseBrowser}
@@ -417,7 +433,7 @@ function MobileMeetsMainContent({
           chatInput={chatInput}
           onInputChange={setChatInput}
           onSend={sendChat}
-          onClose={toggleChat}
+          onClose={handleToggleChat}
           currentUserId={currentUserId}
           isGhostMode={ghostEnabled}
           getDisplayName={resolveDisplayName}

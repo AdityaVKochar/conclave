@@ -55,6 +55,7 @@ interface ControlsBarProps {
   onToggleLock?: () => void;
   isBrowserActive?: boolean;
   isBrowserLaunching?: boolean;
+  showBrowserControls?: boolean;
   onLaunchBrowser?: (url: string) => Promise<boolean>;
   onCloseBrowser?: () => Promise<boolean>;
   hasBrowserAudio?: boolean;
@@ -153,6 +154,7 @@ function ControlsBar({
   onToggleLock,
   isBrowserActive = false,
   isBrowserLaunching = false,
+  showBrowserControls = true,
   onLaunchBrowser,
   onCloseBrowser,
   hasBrowserAudio = false,
@@ -335,7 +337,7 @@ function ControlsBar({
       >
         <Monitor className="w-4 h-4" />
       </button>
-      {isAdmin && onLaunchBrowser && (
+      {showBrowserControls && isAdmin && onLaunchBrowser && (
         <div className="relative" ref={browserMenuRef}>
           <button
             onClick={() => {
@@ -468,7 +470,9 @@ function ControlsBar({
           )}
         </div>
       )}
-      {(hasBrowserAudio || isBrowserActive) && onToggleBrowserAudio && (
+      {showBrowserControls &&
+        (hasBrowserAudio || isBrowserActive) &&
+        onToggleBrowserAudio && (
         <button
           onClick={onToggleBrowserAudio}
           className={isBrowserAudioMuted ? mutedButtonClass : defaultButtonClass}

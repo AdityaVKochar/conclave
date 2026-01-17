@@ -95,8 +95,8 @@ function MobileChatPanel({
                 <div
                   className={`max-w-[80%] rounded-2xl px-3 py-2 ${
                     isOwn
-                      ? "bg-[#F95F4A] text-white rounded-br-sm"
-                      : "bg-[#2a2a2a] text-[#FEFCD9] rounded-bl-sm"
+                      ? "bg-[#F95F4A] text-white rounded-br-sm selection:bg-white/90 selection:text-[#0d0e0d]"
+                      : "bg-[#2a2a2a] text-[#FEFCD9] rounded-bl-sm selection:bg-[#F95F4A]/40 selection:text-white"
                   }`}
                 >
                   <p className="text-sm break-words">{message.content}</p>

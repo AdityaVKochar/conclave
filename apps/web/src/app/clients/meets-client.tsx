@@ -122,6 +122,7 @@ export default function MeetsClient({
   } = useMeetState({ initialRoomId });
 
   const [browserAudioNeedsGesture, setBrowserAudioNeedsGesture] = useState(false);
+  const [isBrowserServiceAvailable, setIsBrowserServiceAvailable] = useState(false);
 
   useEffect(() => {
     if (!enableRoomRouting && !forceJoinOnly) return;
@@ -353,6 +354,9 @@ export default function MeetsClient({
     socketRef: refs.socketRef,
     isAdmin: isAdminFlag,
   });
+  const showBrowserControls = Boolean(
+    browserState?.active || isBrowserServiceAvailable
+  );
 
   const { mounted } = useMeetLifecycle({
     cleanup: socket.cleanup,
@@ -396,6 +400,37 @@ export default function MeetsClient({
 
   const handleBrowserAudioAutoplayBlocked = useCallback(() => {
     setBrowserAudioNeedsGesture(true);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    const checkBrowserService = async () => {
+      try {
+        const response = await fetch("/api/shared-browser/health", {
+          cache: "no-store",
+        });
+        if (!isMounted) return;
+        if (!response.ok) {
+          setIsBrowserServiceAvailable(false);
+          return;
+        }
+        const data = (await response.json().catch(() => null)) as
+          | { ok?: boolean }
+          | null;
+        setIsBrowserServiceAvailable(Boolean(data?.ok));
+      } catch (_error) {
+        if (isMounted) {
+          setIsBrowserServiceAvailable(false);
+        }
+      }
+    };
+
+    checkBrowserService();
+    const interval = setInterval(checkBrowserService, 30000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   const screenTrack = refs.screenProducerRef.current?.track;
@@ -537,6 +572,7 @@ export default function MeetsClient({
           browserState={browserState}
           isBrowserLaunching={isBrowserLaunching}
           browserLaunchError={browserLaunchError}
+          showBrowserControls={showBrowserControls}
           onLaunchBrowser={launchBrowser}
           onNavigateBrowser={navigateBrowser}
           onCloseBrowser={closeBrowser}
@@ -668,6 +704,7 @@ export default function MeetsClient({
         browserState={browserState}
         isBrowserLaunching={isBrowserLaunching}
         browserLaunchError={browserLaunchError}
+        showBrowserControls={showBrowserControls}
         onLaunchBrowser={launchBrowser}
         onNavigateBrowser={navigateBrowser}
         onCloseBrowser={closeBrowser}

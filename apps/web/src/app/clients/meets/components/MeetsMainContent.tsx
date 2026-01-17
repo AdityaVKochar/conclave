@@ -99,6 +99,7 @@ interface MeetsMainContentProps {
   browserState?: BrowserState;
   isBrowserLaunching?: boolean;
   browserLaunchError?: string | null;
+  showBrowserControls?: boolean;
   onLaunchBrowser?: (url: string) => Promise<boolean>;
   onNavigateBrowser?: (url: string) => Promise<boolean>;
   onCloseBrowser?: () => Promise<boolean>;
@@ -179,6 +180,7 @@ export default function MeetsMainContent({
   browserState,
   isBrowserLaunching,
   browserLaunchError,
+  showBrowserControls = true,
   onLaunchBrowser,
   onNavigateBrowser,
   onCloseBrowser,
@@ -204,14 +206,27 @@ export default function MeetsMainContent({
     [nonSystemParticipants]
   );
   const handleToggleParticipants = useCallback(
-    () => setIsParticipantsOpen((prev) => !prev),
-    [setIsParticipantsOpen]
+    () =>
+      setIsParticipantsOpen((prev) => {
+        const next = !prev;
+        if (next && isChatOpen) {
+          toggleChat();
+        }
+        return next;
+      }),
+    [isChatOpen, setIsParticipantsOpen, toggleChat]
   );
 
   const handleCloseParticipants = useCallback(
     () => setIsParticipantsOpen(false),
     [setIsParticipantsOpen]
   );
+  const handleToggleChat = useCallback(() => {
+    if (!isChatOpen && isParticipantsOpen) {
+      setIsParticipantsOpen(false);
+    }
+    toggleChat();
+  }, [isChatOpen, isParticipantsOpen, setIsParticipantsOpen, toggleChat]);
 
   const handlePendingUserStale = useCallback(
     (staleUserId: string) => {
@@ -379,7 +394,7 @@ export default function MeetsMainContent({
               onToggleMute={toggleMute}
               onToggleCamera={toggleCamera}
               onToggleScreenShare={toggleScreenShare}
-              onToggleChat={toggleChat}
+              onToggleChat={handleToggleChat}
               onToggleHandRaised={toggleHandRaised}
               onSendReaction={sendReaction}
               onLeave={leaveRoom}
@@ -392,6 +407,7 @@ export default function MeetsMainContent({
               onToggleLock={onToggleLock}
               isBrowserActive={browserState?.active ?? false}
               isBrowserLaunching={isBrowserLaunching}
+              showBrowserControls={showBrowserControls}
               onLaunchBrowser={onLaunchBrowser}
               onCloseBrowser={onCloseBrowser}
               hasBrowserAudio={hasBrowserAudio}
@@ -463,7 +479,7 @@ export default function MeetsMainContent({
           chatInput={chatInput}
           onInputChange={setChatInput}
           onSend={sendChat}
-          onClose={toggleChat}
+          onClose={handleToggleChat}
           currentUserId={currentUserId}
           isGhostMode={ghostEnabled}
         />

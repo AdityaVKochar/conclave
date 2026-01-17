@@ -101,8 +101,8 @@ function ChatPanel({
                 <div
                   className={`max-w-[85%] rounded-lg px-2.5 py-1.5 ${
                     isOwn
-                      ? "bg-[#F95F4A] text-white"
-                      : "bg-[#1a1a1a] text-[#FEFCD9]/90"
+                      ? "bg-[#F95F4A] text-white selection:bg-white/90 selection:text-[#0d0e0d]"
+                      : "bg-[#1a1a1a] text-[#FEFCD9]/90 selection:bg-[#F95F4A]/40 selection:text-white"
                   }`}
                 >
                   {!isOwn && (
