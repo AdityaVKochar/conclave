@@ -458,10 +458,9 @@ function JoinScreen({
           )}
 
           {phase === "join" && (
-            <div className="w-full max-w-4xl flex flex-col lg:flex-row gap-6 lg:gap-8 animate-fade-in">
-
-              <div className="flex-1 flex flex-col">
-                <div className="relative aspect-video lg:aspect-[4/3] bg-[#0d0e0d] rounded-xl overflow-hidden border border-[#FEFCD9]/10 shadow-2xl">
+            <div className="w-full max-w-6xl grid gap-6 lg:gap-10 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] items-start animate-fade-in">
+              <div className="flex flex-col lg:pr-2">
+                <div className="relative aspect-video lg:aspect-[16/10] bg-[#0d0e0d] rounded-2xl overflow-hidden border border-[#FEFCD9]/10 shadow-2xl">
                   {isCameraOn && localStream ? (
                     <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover scale-x-[-1]" />
                   ) : (
@@ -523,7 +522,8 @@ function JoinScreen({
 
               </div>
 
-              <div className="w-full lg:w-80 flex flex-col">
+              <div className="w-full lg:w-auto">
+                <div className="flex flex-col rounded-2xl border border-[#FEFCD9]/10 bg-[#141414]/80 backdrop-blur-sm p-5 shadow-[0_20px_45px_rgba(0,0,0,0.35)]">
                 {!isRoutedRoom && (
                   <div className="flex mb-6 bg-[#1a1a1a] rounded-lg p-1">
                     <button
@@ -696,6 +696,7 @@ function JoinScreen({
                     />
                   </div>
                 )}
+                </div>
               </div>
             </div>
           )}
