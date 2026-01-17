@@ -48,7 +48,7 @@ const defaultClientPolicies: Record<string, ClientPolicy> = {
   public: {
     allowNonHostRoomCreation: false,
     allowHostJoin: false,
-    useWaitingRoom: true,
+    useWaitingRoom: false,
   },
   internal: {
     allowNonHostRoomCreation: false,
