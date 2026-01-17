@@ -122,12 +122,10 @@ function MeetsHeader({
               style={{ fontFamily: "'PolySans Mono', monospace" }}
             >
               <span className="text-[#FEFCD9]/50">Share link</span>
-              <span className="max-w-[220px] truncate text-[#FEFCD9]" title={displayShareUrl}>
-                {displayShareUrl}
-              </span>
               <button
                 onClick={handleCopyLink}
                 className="flex items-center gap-1 text-[#F95F4A] hover:text-[#ff7a66] transition-colors"
+                title={displayShareUrl}
               >
                 <Copy className="w-3 h-3" />
                 <span>{isCopied ? "Copied" : "Copy"}</span>
