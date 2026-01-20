@@ -203,20 +203,24 @@ function MobileMeetsMainContent({
     }
     toggleChat();
   }, [isChatOpen, isParticipantsOpen, setIsParticipantsOpen, toggleChat]);
+  const participantsArray = useMemo(
+    () => Array.from(participants.values()),
+    [participants]
+  );
   const visibleParticipantCount = useMemo(
     () =>
-      Array.from(participants.values()).filter(
+      participantsArray.filter(
         (participant) => !isSystemUserId(participant.userId)
       ).length,
-    [participants]
+    [participantsArray]
   );
   const hasBrowserAudio = useMemo(
     () =>
-      Array.from(participants.values()).some(
+      participantsArray.some(
         (participant) =>
           isSystemUserId(participant.userId) && Boolean(participant.audioStream)
       ),
-    [participants]
+    [participantsArray]
   );
 
   if (!isJoined) {

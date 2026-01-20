@@ -26,11 +26,13 @@ const isPublicClient = clientId === "public";
 type MeetsClientPageProps = {
   initialRoomId?: string;
   forceJoinOnly?: boolean;
+  fontClassName?: string;
 };
 
 export default function MeetsClientPage({
   initialRoomId,
   forceJoinOnly = false,
+  fontClassName,
 }: MeetsClientPageProps) {
   const user = undefined;
 
@@ -104,6 +106,7 @@ export default function MeetsClientPage({
         reactionAssets={reactionAssets}
         user={user}
         isAdmin={isAdmin}
+        fontClassName={fontClassName}
       />
     </div>
   );

@@ -1,5 +1,5 @@
 import { use } from "react";
-import MeetsClientPage from "../clients/meets-client-page";
+import MeetsClientShell from "../clients/meets-client-shell";
 import { sanitizeRoomCode } from "../clients/meets/utils";
 
 type MeetRoomPageProps = {
@@ -14,7 +14,7 @@ export default function MeetRoomPage({ params }: MeetRoomPageProps) {
     roomCode === "undefined" || roomCode === "null" ? "" : roomCode;
   const sanitizedRoomCode = sanitizeRoomCode(resolvedRoomCode);
   return (
-    <MeetsClientPage
+    <MeetsClientShell
       initialRoomId={sanitizedRoomCode}
       forceJoinOnly={true}
     />

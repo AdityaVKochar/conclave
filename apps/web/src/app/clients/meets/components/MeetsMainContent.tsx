@@ -194,17 +194,18 @@ export default function MeetsMainContent({
   onRetryMedia,
   onTestSpeaker,
 }: MeetsMainContentProps) {
-  const nonSystemParticipants = useMemo(
-    () =>
-      Array.from(participants.values()).filter(
-        (participant) => !isSystemUserId(participant.userId)
-      ),
+  const participantsArray = useMemo(
+    () => Array.from(participants.values()),
     [participants]
   );
-  const visibleParticipantCount = useMemo(
-    () => nonSystemParticipants.length,
-    [nonSystemParticipants]
+  const nonSystemParticipants = useMemo(
+    () =>
+      participantsArray.filter(
+        (participant) => !isSystemUserId(participant.userId)
+      ),
+    [participantsArray]
   );
+  const visibleParticipantCount = nonSystemParticipants.length;
   const handleToggleParticipants = useCallback(
     () =>
       setIsParticipantsOpen((prev) => {
@@ -241,19 +242,19 @@ export default function MeetsMainContent({
   );
   const hasBrowserAudio = useMemo(
     () =>
-      Array.from(participants.values()).some(
+      participantsArray.some(
         (participant) =>
           isSystemUserId(participant.userId) && Boolean(participant.audioStream)
       ),
-    [participants]
+    [participantsArray]
   );
   const browserVideoStream = useMemo(() => {
-    const videoParticipant = Array.from(participants.values()).find(
+    const videoParticipant = participantsArray.find(
       (participant) =>
         isBrowserVideoUserId(participant.userId) && participant.screenShareStream
     );
     return videoParticipant?.screenShareStream ?? null;
-  }, [participants]);
+  }, [participantsArray]);
   return (
     <div className="flex-1 flex flex-col p-4 overflow-hidden relative">
       {isJoined && <ConnectionBanner state={connectionState} />}
