@@ -47,3 +47,11 @@ next-env.d.ts
 .next
 apps/web/node_modules
 packages/*/node_modules
+.build
+.swiftpm
+ # Xcode
+DerivedData
+*.xcuserstate
+xcuserdata
+*.moved-aside
+*.xcworkspace/xcuserdata
