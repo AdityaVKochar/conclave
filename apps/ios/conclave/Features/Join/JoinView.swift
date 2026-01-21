@@ -50,7 +50,7 @@ struct JoinView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                ACMColors.dark
+                ACMColors.darkAlt
                     .ignoresSafeArea()
                 
                 dotGridPattern
@@ -303,7 +303,7 @@ struct JoinView: View {
             ZStack {
                 // Background
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(ACMColors.darkAlt)
+                    .fill(ACMColors.surface)
                 
                 // Camera feed or avatar
                 if isCameraOn, let session = captureSession {
@@ -534,6 +534,15 @@ struct JoinView: View {
                             .foregroundStyle(.white)
                             .autocapitalization(.none)
                             .disableAutocorrection(true)
+                            .onChange(of: roomCode) { newValue in
+                                if newValue.contains("/") || newValue.contains(":") {
+                                    return
+                                }
+                                let sanitized = sanitizeRoomCodeInput(newValue)
+                                if sanitized != newValue {
+                                    roomCode = sanitized
+                                }
+                            }
                             .padding(.horizontal, 12)
                             .padding(.vertical, 12)
                             .background(ACMColors.surface)
@@ -602,7 +611,7 @@ struct JoinView: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color(hex: "#141414").opacity(0.8))
+                .fill(ACMColors.surface.opacity(0.92))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 16)
@@ -648,7 +657,7 @@ struct JoinView: View {
                         )
                         context.fill(
                             Path(ellipseIn: rect),
-                            with: .color(ACMColors.cream.opacity(0.05))
+                            with: .color(ACMColors.cream.opacity(0.035))
                         )
                     }
                 }
@@ -712,7 +721,11 @@ struct JoinView: View {
     }
     
     private func handleJoinRoom() {
-        guard !roomCode.isEmpty else { return }
+        let extractedCode = extractRoomCode(from: roomCode)
+        guard !extractedCode.isEmpty else { return }
+        if extractedCode != roomCode {
+            roomCode = extractedCode
+        }
         viewModel.isAdmin = false
         viewModel.displayName = displayNameInput.isEmpty ? (appState.currentUser?.name ?? "Guest") : displayNameInput
         viewModel.isMuted = !isMicOn
@@ -723,7 +736,7 @@ struct JoinView: View {
             name: appState.currentUser?.name
         )
         viewModel.joinRoom(
-            roomId: roomCode.uppercased(),
+            roomId: extractedCode,
             displayName: viewModel.displayName,
             isGhost: isGhostMode,
             user: userPayload,
@@ -732,12 +745,61 @@ struct JoinView: View {
     }
     
     private func generateRoomCode() -> String {
-        // Generate word-based room code like web app
-        let adjectives = ["swift", "brave", "calm", "eager", "happy", "kind", "proud", "wise"]
-        let nouns = ["falcon", "tiger", "eagle", "wolf", "lion", "hawk", "bear", "fox"]
-        let adj = adjectives.randomElement() ?? "swift"
-        let noun = nouns.randomElement() ?? "falcon"
-        return "\(adj)-\(noun)-\(Int.random(in: 100...999))"
+        let words = (0..<roomWordsPerCode).compactMap { _ in roomWords.randomElement() }
+        return words.joined(separator: roomWordSeparator)
+    }
+
+    private func sanitizeRoomCode(_ value: String) -> String {
+        let normalized = value
+            .lowercased()
+            .replacingOccurrences(of: "[^a-z]+", with: roomWordSeparator, options: .regularExpression)
+            .replacingOccurrences(of: "-+", with: roomWordSeparator, options: .regularExpression)
+            .trimmingCharacters(in: CharacterSet(charactersIn: roomWordSeparator))
+        guard !normalized.isEmpty else { return "" }
+        let words = normalized
+            .split(separator: roomWordSeparator, omittingEmptySubsequences: true)
+            .prefix(roomWordsPerCode)
+            .map { String($0.prefix(roomWordMaxLength)) }
+        return words.joined(separator: roomWordSeparator)
+    }
+
+    private func sanitizeRoomCodeInput(_ value: String) -> String {
+        value
+            .lowercased()
+            .replacingOccurrences(of: "[^a-z]+", with: roomWordSeparator, options: .regularExpression)
+            .replacingOccurrences(of: "-+", with: roomWordSeparator, options: .regularExpression)
+            .trimmingCharacters(in: CharacterSet(charactersIn: roomWordSeparator))
+    }
+
+    private func extractRoomCode(from input: String) -> String {
+        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return "" }
+
+        if let url = URL(string: trimmed), let last = url.pathComponents.last {
+            return sanitizeRoomCode(last)
+        }
+
+        if trimmed.contains("/") {
+            let last = trimmed.split(separator: "/").last.map(String.init) ?? ""
+            return sanitizeRoomCode(last)
+        }
+
+        return sanitizeRoomCode(trimmed)
+    }
+
+    private let roomWords = [
+        "aloe", "aster", "bloom", "canna", "cedar", "clove", "dahl", "daisy", "erica", "flora",
+        "hazel", "iris", "lilac", "lily", "lotus", "maple", "myrrh", "olive", "pansy", "peony",
+        "poppy", "rose", "sorel", "tansy", "thyme", "tulip", "yucca", "zinn", "akane", "akira",
+        "asuna", "eren", "gohan", "goku", "gojo", "kanao", "kira", "levi", "luffy", "maki",
+        "misa", "nami", "riku", "sokka", "saber", "senku", "shoto", "soma", "sora", "tanji",
+        "taki", "toji", "todo", "toph", "yami", "yuki", "yato", "zoro"
+    ]
+
+    private let roomWordsPerCode = 3
+    private let roomWordSeparator = "-"
+    private var roomWordMaxLength: Int {
+        roomWords.map(\.count).max() ?? 0
     }
     
     private func toggleCamera() {

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 // MARK: - Colors
 
@@ -51,16 +52,49 @@ enum ACMGradients {
 // MARK: - Typography
 
 enum ACMFont {
+    private static let regular = "PolySansTrial-Neutral"
+    private static let medium = "PolySansTrial-Median"
+    private static let bold = "PolySansTrial-Bulky"
+    private static let wideBold = "PolySansTrial-BulkyWide"
+    private static let monoRegular = "PolySansTrial-NeutralMono"
+    private static let monoMedium = "PolySansTrial-MedianMono"
+    private static let monoBold = "PolySansTrial-BulkyMono"
+
     static func trial(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
-        .system(size: size, weight: weight, design: .default)
+        let name: String
+        switch weight {
+        case .medium, .semibold:
+            name = medium
+        case .bold, .heavy, .black:
+            name = bold
+        default:
+            name = regular
+        }
+        return custom(name, size: size, fallback: .system(size: size, weight: weight, design: .default))
     }
-    
-    static func mono(_ size: CGFloat) -> Font {
-        .system(size: size, weight: .medium, design: .monospaced)
+
+    static func mono(_ size: CGFloat, weight: Font.Weight = .medium) -> Font {
+        let name: String
+        switch weight {
+        case .bold, .heavy, .black:
+            name = monoBold
+        case .regular:
+            name = monoRegular
+        default:
+            name = monoMedium
+        }
+        return custom(name, size: size, fallback: .system(size: size, weight: weight, design: .monospaced))
     }
-    
+
     static func wide(_ size: CGFloat) -> Font {
-        .system(size: size, weight: .bold, design: .default)
+        custom(wideBold, size: size, fallback: .system(size: size, weight: .bold, design: .default))
+    }
+
+    private static func custom(_ name: String, size: CGFloat, fallback: Font) -> Font {
+        if UIFont(name: name, size: size) != nil {
+            return .custom(name, size: size)
+        }
+        return fallback
     }
 }
 

@@ -17,7 +17,7 @@ struct MeetingView: View {
             ZStack {
                 ACMColors.dark
                     .ignoresSafeArea()
-                
+
                 VStack(spacing: 0) {
                     MeetingHeaderView(
                         roomId: viewModel.roomId,
@@ -25,31 +25,49 @@ struct MeetingView: View {
                         participantCount: viewModel.participantCount,
                         onParticipantsPressed: { showParticipantsSheet = true }
                     )
-                    
+
                     if viewModel.hasActiveScreenShare {
                         PresentationLayoutView(viewModel: viewModel)
                     } else {
                         GridLayoutView(viewModel: viewModel, containerSize: geometry.size)
                     }
-                    
-                    ControlsBarView(
-                        viewModel: viewModel,
-                        onParticipantsPressed: { showParticipantsSheet = true },
-                        onSettingsPressed: { showSettingsSheet = true }
-                    )
-                        .padding(.bottom, geometry.safeAreaInsets.bottom > 0 ? 0 : 8)
+
+                    Spacer(minLength: 0)
                 }
-                
+
+                VStack {
+                    Spacer()
+
+                    ZStack(alignment: .bottom) {
+                        LinearGradient(
+                            colors: [Color.black.opacity(0.0), Color.black.opacity(0.95)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .frame(height: 120)
+                        .allowsHitTesting(false)
+
+                        ControlsBarView(
+                            viewModel: viewModel,
+                            availableWidth: geometry.size.width,
+                            onParticipantsPressed: { showParticipantsSheet = true },
+                            onSettingsPressed: { showSettingsSheet = true }
+                        )
+                        .padding(.bottom, max(12, geometry.safeAreaInsets.bottom))
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+
                 if viewModel.isChatOpen {
                     HStack {
                         Spacer()
-                        
+
                         ChatOverlayView(viewModel: viewModel)
                             .frame(width: min(340, geometry.size.width * 0.85))
                             .transition(.move(edge: .trailing).combined(with: .opacity))
                     }
                 }
-                
+
                 ReactionOverlayView(reactions: viewModel.activeReactions)
             }
             .ignoresSafeArea(.container, edges: .bottom)
@@ -487,27 +505,32 @@ struct PresentationLayoutView: View {
 
 struct ControlsBarView: View {
     @ObservedObject var viewModel: MeetingViewModel
+    let availableWidth: CGFloat
     let onParticipantsPressed: () -> Void
     let onSettingsPressed: () -> Void
     @State private var showReactionPicker = false
     
     var body: some View {
-        HStack(spacing: 4) {
-            ControlButton(
-                icon: "person.2.fill",
-                isActive: false,
-                badge: viewModel.pendingUsersCount > 0 ? viewModel.pendingUsersCount : nil
-            ) {
-                onParticipantsPressed()
-            }
-            
-            if viewModel.isAdmin {
+        let isCompact = availableWidth < 420
+
+        HStack(spacing: isCompact ? 12 : 4) {
+            if !isCompact {
                 ControlButton(
-                    icon: viewModel.isRoomLocked ? "lock.fill" : "lock.open.fill",
-                    isActive: viewModel.isRoomLocked,
-                    activeColor: .yellow.opacity(0.9)
+                    icon: "person.2.fill",
+                    isActive: false,
+                    badge: viewModel.pendingUsersCount > 0 ? viewModel.pendingUsersCount : nil
                 ) {
-                    viewModel.toggleRoomLock()
+                    onParticipantsPressed()
+                }
+
+                if viewModel.isAdmin {
+                    ControlButton(
+                        icon: viewModel.isRoomLocked ? "lock.fill" : "lock.open.fill",
+                        isActive: viewModel.isRoomLocked,
+                        activeColor: .yellow.opacity(0.9)
+                    ) {
+                        viewModel.toggleRoomLock()
+                    }
                 }
             }
             
@@ -587,7 +610,7 @@ struct ControlsBarView: View {
             Rectangle()
                 .fill(ACMColors.creamFaint)
                 .frame(width: 1, height: 24)
-                .padding(.horizontal, 4)
+                .padding(.horizontal, isCompact ? 2 : 4)
             
             Button {
                 viewModel.leaveRoom()
@@ -600,13 +623,13 @@ struct ControlsBarView: View {
             }
             .buttonStyle(ACMControlButtonStyle(isDanger: true))
         }
+        .frame(maxWidth: isCompact ? min(360, availableWidth - 24) : availableWidth - 24)
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
         .background(.black.opacity(0.4))
         .background(.ultraThinMaterial.opacity(0.3))
         .clipShape(Capsule())
         .padding(.horizontal)
-        .padding(.bottom, 8)
     }
 }
 
@@ -963,6 +986,19 @@ struct SettingsSheetView: View {
     var body: some View {
         NavigationStack {
             List {
+                if viewModel.isAdmin {
+                    Section("Room") {
+                        Toggle("Lock room", isOn: Binding(
+                            get: { viewModel.isRoomLocked },
+                            set: { next in
+                                if next != viewModel.isRoomLocked {
+                                    viewModel.toggleRoomLock()
+                                }
+                            }
+                        ))
+                    }
+                }
+
                 if viewModel.isAdmin {
                     Section("Profile") {
                         TextField("Display name", text: $displayNameInput)

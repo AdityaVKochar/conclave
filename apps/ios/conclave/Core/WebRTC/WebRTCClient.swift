@@ -19,7 +19,7 @@ final class VideoTrackWrapper: ObservableObject, Identifiable {
     let userId: String
     let isLocal: Bool
 
-    var rtcVideoTrack: RTCVideoTrack?
+    @Published var rtcVideoTrack: RTCVideoTrack?
 
     @Published var isEnabled: Bool = true
 

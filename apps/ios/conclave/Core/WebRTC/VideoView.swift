@@ -150,16 +150,21 @@ struct RTCVideoViewRepresentable: UIViewRepresentable {
     let track: RTCVideoTrack
     var isMirrored: Bool = false
     
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
     func makeUIView(context: Context) -> RTCMTLVideoView {
         let view = RTCMTLVideoView()
         view.videoContentMode = .scaleAspectFill
         view.clipsToBounds = true
         view.backgroundColor = .black
+        context.coordinator.attach(track: track, to: view)
         return view
     }
     
     func updateUIView(_ uiView: RTCMTLVideoView, context: Context) {
-        track.add(uiView)
+        context.coordinator.attach(track: track, to: uiView)
         
         if isMirrored {
             uiView.transform = CGAffineTransform(scaleX: -1, y: 1)
@@ -168,7 +173,26 @@ struct RTCVideoViewRepresentable: UIViewRepresentable {
         }
     }
     
-    static func dismantleUIView(_ uiView: RTCMTLVideoView, coordinator: ()) {
+    static func dismantleUIView(_ uiView: RTCMTLVideoView, coordinator: Coordinator) {
+        coordinator.detach(from: uiView)
+    }
+
+    final class Coordinator {
+        private weak var attachedTrack: RTCVideoTrack?
+
+        func attach(track: RTCVideoTrack, to view: RTCMTLVideoView) {
+            if attachedTrack === track {
+                return
+            }
+            attachedTrack?.remove(view)
+            attachedTrack = track
+            track.add(view)
+        }
+
+        func detach(from view: RTCMTLVideoView) {
+            attachedTrack?.remove(view)
+            attachedTrack = nil
+        }
     }
 }
 

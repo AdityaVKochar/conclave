@@ -105,12 +105,12 @@
 				Base,
 			);
 			mainGroup = 4C0A687A2F20BE2200EEF0C6;
-			packageReferences = (
-				B066B7C35C6741A78539B86F /* Socket.IO-Client-Swift */,
-				DF11E9D43A6141BF9BE5B7D4 /* Mediasoup-Client-Swift */,
-				F9E3177D06F34FA9A83FC763 /* swift-async-algorithms */,
-			);
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				B066B7C35C6741A78539B86F /* XCRemoteSwiftPackageReference "socket" */,
+				DF11E9D43A6141BF9BE5B7D4 /* XCRemoteSwiftPackageReference "mediasoup-client-swift" */,
+				F9E3177D06F34FA9A83FC763 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 4C0A68842F20BE2200EEF0C6 /* Products */;
 			projectDirPath = "";
@@ -130,51 +130,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		B066B7C35C6741A78539B86F /* Socket.IO-Client-Swift */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/socketio/socket.io-client-swift";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 16.1.0;
-			};
-		};
-		DF11E9D43A6141BF9BE5B7D4 /* Mediasoup-Client-Swift */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/VLprojects/mediasoup-client-swift";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.9.0;
-			};
-		};
-		F9E3177D06F34FA9A83FC763 /* swift-async-algorithms */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/apple/swift-async-algorithms";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.0;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		5C25F6F19A8749458A6C0BB4 /* SocketIO */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B066B7C35C6741A78539B86F /* Socket.IO-Client-Swift */;
-			productName = SocketIO;
-		};
-		04BECF54C4D3443996AA041A /* Mediasoup */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = DF11E9D43A6141BF9BE5B7D4 /* Mediasoup-Client-Swift */;
-			productName = Mediasoup;
-		};
-		DEF10A3C94954C4F8166DE9D /* AsyncAlgorithms */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = F9E3177D06F34FA9A83FC763 /* swift-async-algorithms */;
-			productName = AsyncAlgorithms;
-		};
-/* End XCSwiftPackageProductDependency section */
 
 /* Begin PBXSourcesBuildPhase section */
 		4C0A687F2F20BE2200EEF0C6 /* Sources */ = {
@@ -401,6 +356,51 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		B066B7C35C6741A78539B86F /* XCRemoteSwiftPackageReference "socket" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/socketio/socket.io-client-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 16.1.0;
+			};
+		};
+		DF11E9D43A6141BF9BE5B7D4 /* XCRemoteSwiftPackageReference "mediasoup-client-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/VLprojects/mediasoup-client-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.0;
+			};
+		};
+		F9E3177D06F34FA9A83FC763 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-async-algorithms";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		04BECF54C4D3443996AA041A /* Mediasoup */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DF11E9D43A6141BF9BE5B7D4 /* XCRemoteSwiftPackageReference "mediasoup-client-swift" */;
+			productName = Mediasoup;
+		};
+		5C25F6F19A8749458A6C0BB4 /* SocketIO */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B066B7C35C6741A78539B86F /* XCRemoteSwiftPackageReference "socket" */;
+			productName = SocketIO;
+		};
+		DEF10A3C94954C4F8166DE9D /* AsyncAlgorithms */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F9E3177D06F34FA9A83FC763 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */;
+			productName = AsyncAlgorithms;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 4C0A687B2F20BE2200EEF0C6 /* Project object */;
 }
