@@ -73,7 +73,7 @@ struct JoinView: View {
                             .transition(.opacity)
                         
                     case .auth:
-                        authPhase
+                        authPhase(geometry: geometry)
                             .transition(.asymmetric(
                                 insertion: .move(edge: .bottom).combined(with: .opacity),
                                 removal: .opacity
@@ -153,8 +153,11 @@ struct JoinView: View {
         }
     }
         
-    private var authPhase: some View {
-        VStack(spacing: 0) {
+    private func authPhase(geometry: GeometryProxy) -> some View {
+        let horizontalPadding = min(24.0, geometry.size.width * 0.08)
+        let contentWidth = max(240.0, min(360.0, geometry.size.width - horizontalPadding * 2.0))
+
+        return VStack(spacing: 0) {
             Spacer()
             
             VStack(spacing: 24) {
@@ -191,7 +194,8 @@ struct JoinView: View {
                         }
                         .foregroundStyle(ACMColors.cream)
                         .frame(maxWidth: .infinity)
-                .padding(EdgeInsets(top: 14, leading: 0, bottom: 14, trailing: 0))
+                        .padding(.vertical, 14)
+                        .padding(.horizontal, 12)
                         .acmColorBackground(ACMColors.surface)
                         .overlay {
                             RoundedRectangle(cornerRadius: 8)
@@ -229,8 +233,9 @@ struct JoinView: View {
                         .textFieldStyle(.plain)
                         .font(ACMFont.trial(14))
                         .foregroundStyle(ACMColors.cream)
-                .padding(EdgeInsets(top: 12, leading: 0, bottom: 12, trailing: 0))
-                .acmColorBackground(ACMColors.surface)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 12)
+                        .acmColorBackground(ACMColors.surface)
                         .overlay {
                             RoundedRectangle(cornerRadius: 8)
                                 .strokeBorder(lineWidth: 1)
@@ -250,12 +255,11 @@ struct JoinView: View {
                             .font(ACMFont.trial(14))
                         .foregroundStyle(Color.white)
                             .frame(maxWidth: .infinity)
-                .padding(EdgeInsets(top: 12, leading: 0, bottom: 12, trailing: 0))
+                            .padding(.vertical, 12)
+                            .padding(.horizontal, 12)
                             .acmColorBackground(ACMColors.primaryOrange)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
-                    .disabled(trimWhitespace(guestName).isEmpty)
-                    .opacity(trimWhitespace(guestName).isEmpty ? 0.3 : 1.0)
                 }
                 
                 Button {
@@ -268,8 +272,8 @@ struct JoinView: View {
                 }
                 .padding(EdgeInsets(top: 16, leading: 0, bottom: 0, trailing: 0))
             }
-            .frame(maxWidth: 360)
-                .padding(EdgeInsets(top: 0, leading: 24, bottom: 0, trailing: 24))
+            .frame(maxWidth: contentWidth)
+            .padding(.horizontal, horizontalPadding)
             
             Spacer()
         }
@@ -708,12 +712,17 @@ struct JoinView: View {
     
     // MARK: - Computed Properties
     
+    private var resolvedGuestName: String {
+        let trimmed = trimWhitespace(guestName)
+        return trimmed.isEmpty ? "Guest" : trimmed
+    }
+
     private var userEmail: String {
-        appState.currentUser?.email ?? guestName
+        appState.currentUser?.email ?? resolvedGuestName
     }
     
     private var userInitial: String {
-        String((appState.currentUser?.name ?? guestName).prefix(1)).uppercased()
+        String((appState.currentUser?.name ?? resolvedGuestName).prefix(1)).uppercased()
     }
     
     // MARK: - Actions
@@ -736,9 +745,7 @@ struct JoinView: View {
     }
     
     private func handleGuest() {
-        let trimmedName = trimWhitespace(guestName)
-        guard !trimmedName.isEmpty else { return }
-        
+        let trimmedName = resolvedGuestName
         appState.currentUser = AppState.User(
             id: "guest-\(Int(Date().timeIntervalSince1970 * 1000))",
             name: trimmedName,
