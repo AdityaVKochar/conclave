@@ -37,6 +37,12 @@
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="conclave"/>
       </intent-filter>
+      <intent-filter data-generated="true">
+        <action android:name="android.intent.action.VIEW"/>
+        <data android:scheme="com.googleusercontent.apps.354185850500-ivrl68hu3fdeeiflj9fnr2vrk2gs4dq4" android:pathPrefix="/oauthredirect"/>
+        <category android:name="android.intent.category.BROWSABLE"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+      </intent-filter>
     </activity>
   </application>
 </manifest>

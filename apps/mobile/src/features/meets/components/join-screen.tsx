@@ -212,7 +212,10 @@ export function JoinScreen({
       }
       const response = await fetch(`${trimmedBase}/api/auth/sign-in/social`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Origin: trimmedBase,
+        },
         body: JSON.stringify({
           provider,
           callbackURL: trimmedBase,
@@ -406,42 +409,44 @@ export function JoinScreen({
                   <Pressable
                     onPress={handleGoogleSignIn}
                     disabled={!googleRequest || isAuthLoading}
-                    style={[
+                    style={({ pressed }) => [
                       styles.socialButton,
-                      { borderColor: COLORS.creamDim },
+                      pressed && styles.socialButtonPressed,
                       (isAuthLoading || !googleRequest) && styles.socialButtonDisabled,
                     ]}
                   >
-                    <View style={[styles.socialIcon, { backgroundColor: "#ffffff" }]}>
-                      <GoogleIcon size={16} />
+                    <View style={styles.socialButtonContent}>
+                      <View style={styles.socialIcon}>
+                        {authProvider === "google" ? (
+                          <ActivityIndicator size="small" color={COLORS.cream} />
+                        ) : (
+                          <GoogleIcon size={20} />
+                        )}
+                      </View>
+                      <Text style={styles.socialButtonText}>Continue with Google</Text>
                     </View>
-                    <Text style={[styles.socialButtonText, { color: COLORS.cream }]}>
-                      Continue with Google
-                    </Text>
-                    {authProvider === "google" && (
-                      <ActivityIndicator size="small" color={COLORS.cream} />
-                    )}
                   </Pressable>
 
                   {Platform.OS === "ios" && isAppleAvailable ? (
                     <Pressable
                       onPress={handleAppleSignIn}
                       disabled={isAuthLoading}
-                      style={[
+                      style={({ pressed }) => [
                         styles.socialButton,
-                        { borderColor: COLORS.creamDim, backgroundColor: "#111111" },
+                        pressed && styles.socialButtonPressed,
                         isAuthLoading && styles.socialButtonDisabled,
                       ]}
                     >
-                      <View style={[styles.socialIcon, { backgroundColor: "#1a1a1a" }]}>
-                        <AppleIcon size={16} />
+                      <View style={styles.socialButtonContent}>
+                        <View style={styles.socialIcon}>
+                          {authProvider === "apple" ? (
+                            <ActivityIndicator size="small" color={COLORS.cream} />
+                          ) : (
+                            <AppleIcon size={20} />
+                          )}
+                        </View>
+                        <Text style={styles.socialButtonText}>Continue with Apple</Text>
                       </View>
-                      <Text style={[styles.socialButtonText, { color: COLORS.cream }]}>
-                        Continue with Apple
-                      </Text>
-                      {authProvider === "apple" && (
-                        <ActivityIndicator size="small" color={COLORS.cream} />
-                      )}
                     </Pressable>
                   ) : null}
                 </View>
@@ -920,23 +925,31 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    paddingVertical: 14,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
+    borderColor: "rgba(254, 252, 217, 0.1)",
     backgroundColor: "#1a1a1a",
+    justifyContent: "center",
+  },
+  socialButtonPressed: {
+    borderColor: "rgba(254, 252, 217, 0.25)",
+    backgroundColor: "rgba(26, 26, 26, 0.8)",
   },
   socialButtonDisabled: {
-    opacity: 0.6,
+    opacity: 0.5,
+  },
+  socialButtonContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
   socialIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 20,
+    height: 20,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(254, 252, 217, 0.2)",
   },
   socialIconText: {
     fontSize: 12,
@@ -945,10 +958,11 @@ const styles = StyleSheet.create({
     fontFamily: "PolySans-Mono",
   },
   socialButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "500",
-    flex: 1,
+    letterSpacing: -0.2,
     fontFamily: "PolySans-Regular",
+    color: COLORS.cream,
   },
   dividerRow: {
     flexDirection: "row",
