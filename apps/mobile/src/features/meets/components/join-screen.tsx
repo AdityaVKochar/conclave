@@ -31,6 +31,7 @@ import {
 import { useDeviceLayout } from "../hooks/use-device-layout";
 import { ErrorBanner } from "./error-banner";
 import {
+  Image,
   Pressable,
   ScrollView,
   Text,
@@ -79,14 +80,7 @@ const GoogleIcon = ({ size = 18 }: { size?: number }) => (
   </Svg>
 );
 
-const AppleIcon = ({ size = 18, color = COLORS.cream }: { size?: number; color?: string }) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24">
-    <Path
-      fill={color}
-      d="M16.365 1.43c0 1.14-.462 2.06-1.12 2.78-.74.8-1.94 1.41-3.06 1.32-.14-1.1.35-2.22 1.05-2.98.78-.82 2.12-1.45 3.13-1.12ZM20.39 17.3c-.33.77-.49 1.11-.91 1.79-.58.94-1.4 2.11-2.42 2.12-.91.01-1.14-.6-2.38-.6s-1.5.59-2.41.61c-1.02.01-1.79-1.08-2.37-2.02-1.64-2.65-1.82-5.75-.8-7.33.72-1.11 1.87-1.77 2.95-1.77.92 0 1.5.63 2.38.63.85 0 1.38-.64 2.37-.64 1.02 0 2.1.56 2.82 1.52-2.48 1.36-2.08 4.93.77 5.69Z"
-    />
-  </Svg>
-);
+const appleIcon = require("../../../../assets/apple-50.png");
 
 const authBaseUrl =
   process.env.EXPO_PUBLIC_APP_URL ||
@@ -464,7 +458,11 @@ export function JoinScreen({
                           {authProvider === "apple" ? (
                             <ActivityIndicator size="small" color={COLORS.cream} />
                           ) : (
-                            <AppleIcon size={20} />
+                            <Image
+                              source={appleIcon}
+                              style={styles.appleIcon}
+                              accessibilityIgnoresInvertColors
+                            />
                           )}
                         </View>
                         <Text style={styles.socialButtonText}>Continue with Apple</Text>
@@ -940,17 +938,17 @@ const styles = StyleSheet.create({
     width: "100%",
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
     paddingVertical: 12,
     paddingHorizontal: 16,
+    minHeight: 48,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "rgba(254, 252, 217, 0.1)",
-    backgroundColor: "#1a1a1a",
+    borderColor: "rgba(254, 252, 217, 0.2)",
+    backgroundColor: "rgba(26, 26, 26, 0.9)",
     justifyContent: "center",
   },
   socialButtonPressed: {
-    borderColor: "rgba(254, 252, 217, 0.25)",
+    borderColor: "rgba(254, 252, 217, 0.3)",
     backgroundColor: "rgba(26, 26, 26, 0.8)",
   },
   socialButtonDisabled: {
@@ -959,13 +957,19 @@ const styles = StyleSheet.create({
   socialButtonContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    justifyContent: "center",
+    gap: 12,
   },
   socialIcon: {
     width: 20,
     height: 20,
     alignItems: "center",
     justifyContent: "center",
+  },
+  appleIcon: {
+    width: 20,
+    height: 20,
+    objectFit: "contain",
   },
   socialIconText: {
     fontSize: 12,
@@ -979,6 +983,8 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
     fontFamily: "PolySans-Regular",
     color: COLORS.cream,
+    lineHeight: 13,
+    includeFontPadding: false,
   },
   dividerRow: {
     flexDirection: "row",
