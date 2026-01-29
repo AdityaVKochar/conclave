@@ -31,7 +31,7 @@ import {
   ROOM_CODE_MAX_LENGTH,
 } from "../utils";
 import { useDeviceLayout } from "../hooks/use-device-layout";
-import { ErrorBanner } from "./error-banner";
+import { ErrorSheet } from "./error-sheet";
 import { GlassPill } from "./glass-pill";
 import {
   Image,
@@ -611,9 +611,11 @@ export function JoinScreen({
           >
             <View style={styles.flex1} {...(panResponder?.panHandlers ?? {})}>
               {meetError ? (
-                <ErrorBanner
+                <ErrorSheet
+                  visible={!!meetError}
                   meetError={meetError}
                   onDismiss={onDismissMeetError}
+                  autoDismissMs={6000}
                   primaryActionLabel={onRetryMedia ? "Retry Permissions" : undefined}
                   onPrimaryAction={onRetryMedia}
                 />
@@ -829,9 +831,11 @@ export function JoinScreen({
             >
               <View style={styles.joinContentInner}>
                 {meetError ? (
-                  <ErrorBanner
+                  <ErrorSheet
+                    visible={!!meetError}
                     meetError={meetError}
                     onDismiss={onDismissMeetError}
+                    autoDismissMs={6000}
                     primaryActionLabel={onRetryMedia ? "Retry Permissions" : undefined}
                     onPrimaryAction={onRetryMedia}
                   />

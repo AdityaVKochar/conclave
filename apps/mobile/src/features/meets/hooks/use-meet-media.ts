@@ -97,6 +97,8 @@ export function useMeetMedia({
   const updateVideoQualityRef = useRef<
     (quality: VideoQuality) => Promise<void>
   >(async () => {});
+  const keepAliveOscRef = useRef<OscillatorNode | null>(null);
+  const keepAliveGainRef = useRef<GainNode | null>(null);
   const buildAudioConstraints = useCallback(
     (deviceId?: string): MediaTrackConstraints => ({
       ...DEFAULT_AUDIO_CONSTRAINTS,
@@ -230,6 +232,46 @@ export function useMeetMedia({
       audioContext.resume().catch(() => {});
     }
   }, [getAudioContext]);
+
+  const startAudioKeepAlive = useCallback(() => {
+    const audioContext = getAudioContext();
+    if (!audioContext) return;
+
+    if (audioContext.state === "suspended") {
+      audioContext.resume().catch(() => {});
+    }
+
+    if (keepAliveOscRef.current || keepAliveGainRef.current) return;
+
+    try {
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.value = 30;
+      gain.gain.value = 0.0001;
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start();
+      keepAliveOscRef.current = oscillator;
+      keepAliveGainRef.current = gain;
+    } catch (error) {
+      console.warn("[Meets] Failed to start audio keepalive:", error);
+    }
+  }, [getAudioContext]);
+
+  const stopAudioKeepAlive = useCallback(() => {
+    if (keepAliveOscRef.current) {
+      try {
+        keepAliveOscRef.current.stop();
+      } catch {}
+      keepAliveOscRef.current.disconnect();
+      keepAliveOscRef.current = null;
+    }
+    if (keepAliveGainRef.current) {
+      keepAliveGainRef.current.disconnect();
+      keepAliveGainRef.current = null;
+    }
+  }, []);
 
   const stopLocalTrack = useCallback(
     (track?: MediaStreamTrack | null) => {
@@ -455,9 +497,8 @@ export function useMeetMedia({
     ]
   );
 
-  const requestMediaPermissions = useCallback(async (): Promise<
-    MediaStream | null
-  > => {
+  const requestMediaPermissions = useCallback(
+    async (options?: { forceVideo?: boolean }): Promise<MediaStream | null> => {
     if (permissionHintTimeoutRef.current) {
       clearTimeout(permissionHintTimeoutRef.current);
     }
@@ -467,7 +508,7 @@ export function useMeetMedia({
     }, 450);
 
     try {
-      const needsVideo = !isCameraOff;
+      const needsVideo = options?.forceVideo ? true : !isCameraOff;
       const permissionState = await requestAndroidPermissions({
         audio: true,
         video: needsVideo,
@@ -1326,6 +1367,12 @@ export function useMeetMedia({
     localStreamRef.current = localStream;
   }, [localStream, localStreamRef]);
 
+  useEffect(() => {
+    return () => {
+      stopAudioKeepAlive();
+    };
+  }, [stopAudioKeepAlive]);
+
   return {
     mediaState,
     showPermissionHint,
@@ -1342,5 +1389,7 @@ export function useMeetMedia({
     handleLocalTrackEnded,
     primeAudioOutput,
     playNotificationSound,
+    startAudioKeepAlive,
+    stopAudioKeepAlive,
   };
 }

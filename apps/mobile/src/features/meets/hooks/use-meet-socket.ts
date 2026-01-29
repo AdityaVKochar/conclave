@@ -78,7 +78,7 @@ interface UseMeetSocketOptions {
   updateVideoQualityRef: React.MutableRefObject<
     (quality: VideoQuality) => Promise<void>
   >;
-  requestMediaPermissions: () => Promise<MediaStream | null>;
+  requestMediaPermissions: (options?: { forceVideo?: boolean }) => Promise<MediaStream | null>;
   stopLocalTrack: (track?: MediaStreamTrack | null) => void;
   handleLocalTrackEnded: (kind: "audio" | "video", track: MediaStreamTrack) => void;
   playNotificationSound: (type: "join" | "leave" | "waiting") => void;

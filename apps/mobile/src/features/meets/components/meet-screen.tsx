@@ -3,6 +3,7 @@ import { StatusBar } from "expo-status-bar";
 import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import {
   AppState,
+  Linking,
   NativeModules,
   Platform,
   StyleSheet,
@@ -22,7 +23,7 @@ import {
   stopInCall,
 } from "@/lib/call-service";
 import { ensureWebRTCGlobals } from "@/lib/webrtc";
-import { View } from "@/tw";
+import { Text, View } from "@/tw";
 import { reactionAssetList } from "../reaction-assets";
 import { useMeetAudioActivity } from "../hooks/use-meet-audio-activity";
 import { useMeetChat } from "../hooks/use-meet-chat";
@@ -41,7 +42,7 @@ import { createMeetError } from "../utils";
 import { getCachedUser, hydrateCachedUser, setCachedUser } from "../auth-session";
 import { CallScreen } from "./call-screen";
 import { ChatPanel } from "./chat-panel";
-import { ErrorBanner } from "./error-banner";
+import { ErrorSheet } from "./error-sheet";
 import { JoinScreen } from "./join-screen";
 import { ParticipantsPanel } from "./participants-panel";
 import { ReactionOverlay } from "./reaction-overlay";
@@ -112,6 +113,7 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
     isRoomLocked,
     setIsRoomLocked,
   } = useMeetState({ initialRoomId });
+  const shouldKeepAliveInBackground = isScreenSharing || !!activeScreenShareId;
 
   const {
     videoQuality,
@@ -226,6 +228,8 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
     handleLocalTrackEnded,
     playNotificationSound,
     primeAudioOutput,
+    startAudioKeepAlive,
+    stopAudioKeepAlive,
   } = useMeetMedia({
     ghostEnabled: isGhostMode,
     connectionState,
@@ -275,9 +279,17 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
       if (!isActive) {
         wasCameraOnBeforeBackgroundRef.current = !isCameraOff;
         wasMutedBeforeBackgroundRef.current = isMuted;
+        if (Platform.OS === "ios" && shouldKeepAliveInBackground) {
+          startAudioKeepAlive();
+        } else if (Platform.OS === "ios") {
+          stopAudioKeepAlive();
+        }
         return;
       }
 
+      if (Platform.OS === "ios") {
+        stopAudioKeepAlive();
+      }
       if (wasCameraOnBeforeBackgroundRef.current && isCameraOff) {
         void toggleCamera();
       }
@@ -288,7 +300,29 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
     return () => {
       subscription.remove();
     };
-  }, [isJoined, isCameraOff, isMuted, toggleCamera, toggleMute]);
+  }, [
+    isJoined,
+    isCameraOff,
+    isMuted,
+    toggleCamera,
+    toggleMute,
+    startAudioKeepAlive,
+    stopAudioKeepAlive,
+    shouldKeepAliveInBackground,
+  ]);
+
+  useEffect(() => {
+    if (Platform.OS !== "ios") return;
+    if (!isJoined || isAppActiveRef.current) {
+      stopAudioKeepAlive();
+      return;
+    }
+    if (shouldKeepAliveInBackground) {
+      startAudioKeepAlive();
+    } else {
+      stopAudioKeepAlive();
+    }
+  }, [isJoined, shouldKeepAliveInBackground, startAudioKeepAlive, stopAudioKeepAlive]);
 
   const { toggleHandRaised, setHandRaisedState } = useMeetHandRaise({
     isHandRaised,
@@ -482,6 +516,18 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
     };
   }, [isJoined, handleLeave]);
 
+  const handleRetryPermissions = useCallback(async () => {
+    if (Platform.OS === "ios") {
+      Linking.openSettings().catch(() => {});
+      return;
+    }
+    try {
+      await requestMediaPermissions({ forceVideo: true });
+    } catch (err) {
+      setMeetError(createMeetError(err));
+    }
+  }, [requestMediaPermissions, setMeetError]);
+
   const handleJoin = useCallback(
     (value: string, options?: { isHost?: boolean }) => {
       if (!value.trim()) return;
@@ -657,12 +703,16 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
     <View className="flex-1 bg-[#0d0e0d]">
       <StatusBar style="light" />
       {isJoined && meetError ? (
-        <ErrorBanner
+        <ErrorSheet
+          visible={!!meetError}
           meetError={meetError}
           onDismiss={() => setMeetError(null)}
+          autoDismissMs={6000}
           primaryActionLabel={
             meetError.code === "PERMISSION_DENIED"
-              ? "Retry Permissions"
+              ? Platform.OS === "ios"
+                ? "Open Settings"
+                : "Retry Permissions"
               : meetError.code === "MEDIA_ERROR"
                 ? "Retry Devices"
                 : undefined
@@ -670,13 +720,15 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
           onPrimaryAction={
             meetError.code === "PERMISSION_DENIED" ||
               meetError.code === "MEDIA_ERROR"
-              ? async () => {
-                try {
-                  await requestMediaPermissions();
-                } catch (err) {
-                  setMeetError(createMeetError(err));
+              ? meetError.code === "PERMISSION_DENIED"
+                ? handleRetryPermissions
+                : async () => {
+                  try {
+                    await requestMediaPermissions({ forceVideo: true });
+                  } catch (err) {
+                    setMeetError(createMeetError(err));
+                  }
                 }
-              }
               : undefined
           }
         />
@@ -701,13 +753,7 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
           showPermissionHint={showPermissionHint}
           meetError={meetError}
           onDismissMeetError={() => setMeetError(null)}
-          onRetryMedia={async () => {
-            try {
-              await requestMediaPermissions();
-            } catch (err) {
-              setMeetError(createMeetError(err));
-            }
-          }}
+          onRetryMedia={handleRetryPermissions}
         />
       ) : (
         <CallScreen
@@ -832,13 +878,14 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
         <View className="absolute inset-0 bg-black/70 items-center justify-center px-6">
           <View className="bg-neutral-900 border border-white/10 rounded-3xl px-6 py-5">
             <View className="gap-2">
-              <ErrorBanner
-                meetError={{
-                  code: "UNKNOWN",
-                  message: waitingMessage,
-                  recoverable: true,
-                }}
-              />
+              <View className="gap-2">
+                <Text className="text-base font-semibold text-[#FEFCD9]" selectable>
+                  {waitingMessage}
+                </Text>
+                <Text className="text-xs text-[#FEFCD9]/60">
+                  We’ll let you in as soon as the host admits you.
+                </Text>
+              </View>
             </View>
           </View>
         </View>
