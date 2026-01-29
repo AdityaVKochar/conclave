@@ -704,10 +704,10 @@ struct JoinView: View {
                     let spacing = 28.dp.toPx()
                     let radius = 1.dp.toPx()
                     let dotColor = androidx.compose.ui.graphics.Color(
-                        254.0 / 255.0,
-                        252.0 / 255.0,
-                        217.0 / 255.0,
-                        0.08
+                        red: Float(254.0 / 255.0),
+                        green: Float(252.0 / 255.0),
+                        blue: Float(217.0 / 255.0),
+                        alpha: Float(0.08)
                     )
                     var y = Float(0.0)
                     while (y <= size.height) {
