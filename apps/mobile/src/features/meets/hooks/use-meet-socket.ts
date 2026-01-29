@@ -691,7 +691,7 @@ export function useMeetSocket({
       if (!transport) return;
 
       const audioTrack = stream.getAudioTracks()[0];
-      if (audioTrack) {
+      if (audioTrack && audioTrack.readyState === "live") {
         try {
           const audioProducer = await transport.produce({
             track: audioTrack,
@@ -716,10 +716,13 @@ export function useMeetSocket({
         } catch (err) {
           console.error("[Meets] Failed to produce audio:", err);
         }
+      } else if (audioTrack) {
+        console.warn("[Meets] Skipping ended audio track before produce");
+        setIsMuted(true);
       }
 
       const videoTrack = stream.getVideoTracks()[0];
-      if (videoTrack) {
+      if (videoTrack && videoTrack.readyState === "live") {
         try {
           const maxBitrate =
             videoQualityRef.current === "low"
@@ -743,6 +746,9 @@ export function useMeetSocket({
         } catch (err) {
           console.error("[Meets] Failed to produce video:", err);
         }
+      } else if (videoTrack) {
+        console.warn("[Meets] Skipping ended video track before produce");
+        setIsCameraOff(true);
       }
     },
     [
@@ -751,6 +757,8 @@ export function useMeetSocket({
       videoProducerRef,
       isMuted,
       isCameraOff,
+      setIsMuted,
+      setIsCameraOff,
       videoQualityRef,
     ]
   );

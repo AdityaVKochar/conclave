@@ -258,44 +258,134 @@ export function useMeetMedia({
     (kind: "audio" | "video", track: MediaStreamTrack) => {
       if (consumeIntentionalStop(track)) return;
 
-      if (kind === "audio") {
-        setIsMuted(true);
-        const producer = audioProducerRef.current;
-        if (producer) {
-          socketRef.current?.emit(
-            "closeProducer",
-            { producerId: producer.id },
-            () => {}
-          );
-          try {
-            producer.close();
-          } catch {}
-          audioProducerRef.current = null;
+      const cleanupTrack = () => {
+        setLocalStream((prev) => {
+          if (!prev) return prev;
+          const remaining = prev.getTracks().filter((t) => t.kind !== kind);
+          return new MediaStream(remaining);
+        });
+      };
+
+      const closeProducer = () => {
+        if (kind === "audio") {
+          setIsMuted(true);
+          const producer = audioProducerRef.current;
+          if (producer) {
+            socketRef.current?.emit(
+              "closeProducer",
+              { producerId: producer.id },
+              () => {}
+            );
+            try {
+              producer.close();
+            } catch {}
+            audioProducerRef.current = null;
+          }
+        } else {
+          setIsCameraOff(true);
+          const producer = videoProducerRef.current;
+          if (producer) {
+            socketRef.current?.emit(
+              "closeProducer",
+              { producerId: producer.id },
+              () => {}
+            );
+            try {
+              producer.close();
+            } catch {}
+            videoProducerRef.current = null;
+          }
         }
-      } else {
-        setIsCameraOff(true);
-        const producer = videoProducerRef.current;
-        if (producer) {
-          socketRef.current?.emit(
-            "closeProducer",
-            { producerId: producer.id },
-            () => {}
-          );
+      };
+
+      if (kind === "audio" && connectionState === "joined" && !ghostEnabled && !isMuted) {
+        void (async () => {
           try {
-            producer.close();
-          } catch {}
-          videoProducerRef.current = null;
-        }
+            const permissionState = await requestAndroidPermissions({ audio: true });
+            if (!permissionState.audio) {
+              closeProducer();
+              cleanupTrack();
+              return;
+            }
+
+            let recoveredStream: MediaStream | null = null;
+            try {
+              recoveredStream = await getUserMedia({
+                audio: buildAudioConstraints(selectedAudioInputDeviceId),
+              });
+            } catch (err) {
+              if (selectedAudioInputDeviceId) {
+                try {
+                  recoveredStream = await getUserMedia({
+                    audio: buildAudioConstraints(),
+                  });
+                  setSelectedAudioInputDeviceId("");
+                } catch {
+                  recoveredStream = null;
+                }
+              }
+              if (!recoveredStream) {
+                throw err;
+              }
+            }
+
+            const newAudioTrack = recoveredStream.getAudioTracks()[0];
+            if (!newAudioTrack) {
+              closeProducer();
+              cleanupTrack();
+              return;
+            }
+
+            newAudioTrack.onended = () => {
+              handleLocalTrackEnded("audio", newAudioTrack);
+            };
+            newAudioTrack.enabled = true;
+
+            const producer = audioProducerRef.current;
+            if (producer) {
+              await producer.replaceTrack({ track: newAudioTrack });
+              try {
+                producer.resume();
+              } catch {}
+              socketRef.current?.emit(
+                "toggleMute",
+                { producerId: producer.id, paused: false },
+                () => {}
+              );
+            }
+
+            setLocalStream((prev) => {
+              if (prev) {
+                const remaining = prev.getTracks().filter((t) => t.kind !== "audio");
+                return new MediaStream([...remaining, newAudioTrack]);
+              }
+              return new MediaStream([newAudioTrack]);
+            });
+
+            setIsMuted(false);
+            return;
+          } catch (err) {
+            console.error("[Meets] Failed to recover audio track:", err);
+            closeProducer();
+            cleanupTrack();
+          }
+        })();
+        return;
       }
 
-      setLocalStream((prev) => {
-        if (!prev) return prev;
-        const remaining = prev.getTracks().filter((t) => t.kind !== kind);
-        return new MediaStream(remaining);
-      });
+      closeProducer();
+      cleanupTrack();
     },
     [
       consumeIntentionalStop,
+      connectionState,
+      ghostEnabled,
+      isMuted,
+      requestAndroidPermissions,
+      getUserMedia,
+      buildAudioConstraints,
+      selectedAudioInputDeviceId,
+      setSelectedAudioInputDeviceId,
       setIsMuted,
       setIsCameraOff,
       setLocalStream,

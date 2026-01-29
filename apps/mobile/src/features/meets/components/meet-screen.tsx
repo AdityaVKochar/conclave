@@ -430,7 +430,6 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
   useEffect(() => {
     if (process.env.EXPO_OS === "web") return;
     if (!isJoined) return;
-    if (__DEV__) return;
     let cleanupHandlers: (() => void) | undefined;
     let activeCallId: string | null = null;
 
