@@ -12,15 +12,20 @@ import {
 } from "react-native";
 import { ScreenCapturePickerView } from "react-native-webrtc";
 import {
+  ensureCallNotificationPermissionIOS,
   ensureCallKeep,
   endCallSession,
   registerCallKeepHandlers,
   setAudioRoute,
+  setCallMuted,
   startCallSession,
+  startCallNotificationIOS,
   startForegroundCallService,
   startInCall,
+  stopCallNotificationIOS,
   stopForegroundCallService,
   stopInCall,
+  updateCallNotificationIOS,
   updateForegroundCallService,
   registerForegroundCallServiceHandlers,
 } from "@/lib/call-service";
@@ -291,6 +296,13 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
   }, [isJoined]);
 
   useEffect(() => {
+    if (Platform.OS !== "ios") return;
+    if (!hasActiveCall) {
+      void stopCallNotificationIOS();
+    }
+  }, [hasActiveCall]);
+
+  useEffect(() => {
     isCameraOffRef.current = isCameraOff;
   }, [isCameraOff]);
 
@@ -327,6 +339,12 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
         } else if (Platform.OS === "ios") {
           stopAudioKeepAlive();
         }
+        if (Platform.OS === "ios" && state === "background") {
+          void startCallNotificationIOS({
+            roomId: roomIdRef.current || roomId,
+            isMuted: isMutedRef.current,
+          });
+        }
         return;
       }
 
@@ -336,6 +354,7 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
 
       if (Platform.OS === "ios") {
         stopAudioKeepAlive();
+        void stopCallNotificationIOS();
       }
       if (wasCameraOnBeforeBackgroundRef.current && isCameraOff) {
         void toggleCamera();
@@ -590,6 +609,22 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
     });
   }, [hasActiveCall, roomId, isCameraOff, isMuted]);
 
+  useEffect(() => {
+    if (Platform.OS !== "ios") return;
+    if (!hasActiveCall) return;
+    if (isAppActiveRef.current) return;
+    void updateCallNotificationIOS({
+      roomId: roomIdRef.current || roomId,
+      isMuted,
+    });
+  }, [hasActiveCall, roomId, isMuted]);
+
+  useEffect(() => {
+    if (Platform.OS !== "ios") return;
+    if (!hasActiveCall) return;
+    setCallMuted(isMuted);
+  }, [hasActiveCall, isMuted]);
+
   const handleRequestPermissions = useCallback(async () => {
     try {
       await requestMediaPermissions({ forceVideo: true });
@@ -611,13 +646,16 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
   }, [requestMediaPermissions, setMeetError]);
 
   const handleJoin = useCallback(
-    (value: string, options?: { isHost?: boolean }) => {
+    async (value: string, options?: { isHost?: boolean }) => {
       if (!value.trim()) return;
       if (!apiBaseUrl) {
         setMeetError(
           createMeetError("Missing EXPO_PUBLIC_SFU_BASE_URL for mobile")
         );
         return;
+      }
+      if (Platform.OS === "ios") {
+        await ensureCallNotificationPermissionIOS();
       }
       setIsAdmin(!!options?.isHost);
       socket.joinRoomById(value.trim(), options);

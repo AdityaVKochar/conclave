@@ -14,6 +14,7 @@ import {
 
 let callKeepReady = false;
 let currentCallId: string | null = null;
+let callKeepStartAtMs = 0;
 let callKeepModule: typeof import("react-native-callkeep") | null = null;
 let foregroundActionsCleanup: (() => void) | null = null;
 let foregroundChannelPromise: Promise<string> | null = null;
@@ -23,6 +24,9 @@ const FOREGROUND_ACTION_LEAVE = "leave";
 const FOREGROUND_ACTION_OPEN = "open";
 const FOREGROUND_ACTION_TOGGLE_MUTE = "toggle-mute";
 const FOREGROUND_COLOR = "#F95F4A";
+const IOS_CATEGORY_MUTED = "conclave-call-muted";
+const IOS_CATEGORY_UNMUTED = "conclave-call-unmuted";
+let iosCategoriesConfigured = false;
 
 const getCallKeep = () => {
   if (Platform.OS !== "ios") return null;
@@ -83,6 +87,11 @@ export function startCallSession(handle: string, displayName: string) {
   currentCallId = callId;
   if (callKeep) {
     callKeep.default.startCall(callId, handle, displayName, "generic", true);
+    callKeepStartAtMs = Date.now();
+    try {
+      callKeep.default.reportConnectingOutgoingCallWithUUID(callId);
+      callKeep.default.reportConnectedOutgoingCallWithUUID(callId);
+    } catch {}
     callKeep.default.setCurrentCallActive(callId);
   }
   return callId;
@@ -96,6 +105,14 @@ export function endCallSession(callId?: string) {
     callKeep.default.endCall(id);
   }
   if (currentCallId === id) currentCallId = null;
+}
+
+export function setCallMuted(muted: boolean) {
+  const callKeep = getCallKeep();
+  if (!callKeep || !currentCallId) return;
+  try {
+    callKeep.default.setMutedCall(currentCallId, muted);
+  } catch {}
 }
 
 export function startInCall() {
@@ -149,6 +166,48 @@ export async function updateForegroundCallService(options?: {
   }
 }
 
+export async function ensureCallNotificationPermissionIOS() {
+  if (Platform.OS !== "ios") return;
+  await ensureNotificationPermission();
+}
+
+export async function startCallNotificationIOS(options?: {
+  roomId?: string;
+  isMuted?: boolean;
+}) {
+  try {
+    if (Platform.OS !== "ios") return;
+    await ensureIOSNotificationCategories();
+    const notification = buildIOSCallNotification(options);
+    await notifee.displayNotification(notification);
+  } catch (error) {
+    console.warn("[CallNotification] start failed", error);
+  }
+}
+
+export async function updateCallNotificationIOS(options?: {
+  roomId?: string;
+  isMuted?: boolean;
+}) {
+  try {
+    if (Platform.OS !== "ios") return;
+    await ensureIOSNotificationCategories();
+    const notification = buildIOSCallNotification(options);
+    await notifee.displayNotification(notification);
+  } catch (error) {
+    console.warn("[CallNotification] update failed", error);
+  }
+}
+
+export async function stopCallNotificationIOS() {
+  try {
+    if (Platform.OS !== "ios") return;
+    await notifee.cancelNotification(FOREGROUND_NOTIFICATION_ID);
+  } catch (error) {
+    console.warn("[CallNotification] stop failed", error);
+  }
+}
+
 export async function stopForegroundCallService() {
   try {
     if (Platform.OS !== "android") return;
@@ -171,6 +230,7 @@ export function registerForegroundCallServiceHandlers(handlers: {
   setForegroundActionHandlers({
     onLeave: handlers.onLeave,
     onOpen: handlers.onOpen,
+    onToggleMute: handlers.onToggleMute,
   });
   foregroundActionsCleanup = () => {
     clearForegroundActionHandlers();
@@ -198,6 +258,11 @@ export function registerCallKeepHandlers(onHangup: () => void) {
     return () => {};
   }
   const handleEndCall = () => {
+    const elapsed = Date.now() - callKeepStartAtMs;
+    if (callKeepStartAtMs && elapsed < 3000) {
+      console.warn("[CallKeep] Ignoring endCall shortly after start");
+      return;
+    }
     onHangup();
   };
   const endCallSub = callKeep.default.addEventListener(
@@ -248,13 +313,27 @@ async function buildForegroundNotification(options?: {
       actions: [
         {
           title: "Leave",
-          pressAction: { id: FOREGROUND_ACTION_LEAVE },
+          pressAction: { id: FOREGROUND_ACTION_LEAVE, launchActivity: "default" },
         },
         {
           title: muteTitle,
-          pressAction: { id: FOREGROUND_ACTION_TOGGLE_MUTE },
+          pressAction: { id: FOREGROUND_ACTION_TOGGLE_MUTE, launchActivity: "default" },
         },
       ],
+    },
+  };
+}
+
+function buildIOSCallNotification(options?: { roomId?: string; isMuted?: boolean }) {
+  const roomId = options?.roomId?.trim();
+  const message = roomId ? `Meeting code: ${roomId}` : "Meeting in progress";
+  return {
+    id: FOREGROUND_NOTIFICATION_ID,
+    title: "Conclave",
+    body: message,
+    ios: {
+      categoryId: options?.isMuted ? IOS_CATEGORY_MUTED : IOS_CATEGORY_UNMUTED,
+      sound: "default",
     },
   };
 }
@@ -285,4 +364,26 @@ async function ensureNotificationPermission() {
   } catch (error) {
     console.warn("[ForegroundService] notification permission check failed", error);
   }
+}
+
+async function ensureIOSNotificationCategories() {
+  if (Platform.OS !== "ios") return;
+  if (iosCategoriesConfigured) return;
+  await notifee.setNotificationCategories([
+    {
+      id: IOS_CATEGORY_UNMUTED,
+      actions: [
+        { id: FOREGROUND_ACTION_LEAVE, title: "Leave", foreground: true },
+        { id: FOREGROUND_ACTION_TOGGLE_MUTE, title: "Mute", foreground: true },
+      ],
+    },
+    {
+      id: IOS_CATEGORY_MUTED,
+      actions: [
+        { id: FOREGROUND_ACTION_LEAVE, title: "Leave", foreground: true },
+        { id: FOREGROUND_ACTION_TOGGLE_MUTE, title: "Unmute", foreground: true },
+      ],
+    },
+  ]);
+  iosCategoriesConfigured = true;
 }
