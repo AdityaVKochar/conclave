@@ -1,16 +1,27 @@
-import { AppState, Platform } from "react-native";
+import { AppState, PermissionsAndroid, Platform } from "react-native";
+import notifee, {
+  AuthorizationStatus,
+  AndroidForegroundServiceType,
+  AndroidImportance,
+  AndroidVisibility,
+} from "@notifee/react-native";
 import type { IOptions } from "react-native-callkeep";
 import InCallManager from "react-native-incall-manager";
+import {
+  clearForegroundActionHandlers,
+  setForegroundActionHandlers,
+} from "./foreground-actions";
 
 let callKeepReady = false;
 let currentCallId: string | null = null;
 let callKeepModule: typeof import("react-native-callkeep") | null = null;
-let foregroundServiceModule: unknown | null = null;
 let foregroundActionsCleanup: (() => void) | null = null;
+let foregroundChannelPromise: Promise<string> | null = null;
 
-const FOREGROUND_NOTIFICATION_ID = 4242;
+const FOREGROUND_NOTIFICATION_ID = "conclave-call";
 const FOREGROUND_ACTION_LEAVE = "leave";
 const FOREGROUND_ACTION_OPEN = "open";
+const FOREGROUND_ACTION_TOGGLE_MUTE = "toggle-mute";
 const FOREGROUND_COLOR = "#F95F4A";
 
 const getCallKeep = () => {
@@ -21,17 +32,16 @@ const getCallKeep = () => {
   return callKeepModule;
 };
 
-const getForegroundService = (): any | null => {
-  if (Platform.OS !== "android") return null;
-  if (!foregroundServiceModule) {
-    try {
-      foregroundServiceModule = require("@supersami/rn-foreground-service");
-    } catch (error) {
-      console.warn("[ForegroundService] module not available", error);
-      return null;
-    }
+const getForegroundChannel = async () => {
+  if (Platform.OS !== "android") return "";
+  if (!foregroundChannelPromise) {
+    foregroundChannelPromise = notifee.createChannel({
+      id: "conclave-call",
+      name: "Conclave Call",
+      importance: AndroidImportance.HIGH,
+    });
   }
-  return (foregroundServiceModule as any)?.default ?? foregroundServiceModule;
+  return foregroundChannelPromise;
 };
 
 const CALLKEEP_OPTIONS: IOptions = {
@@ -97,39 +107,53 @@ export function stopInCall() {
   InCallManager.stop();
 }
 
-export async function startForegroundCallService(options?: { roomId?: string }) {
-  const ForegroundService = getForegroundService();
-  if (!ForegroundService) return;
+export async function startForegroundCallService(options?: {
+  roomId?: string;
+  includeCamera?: boolean;
+  isMuted?: boolean;
+}) {
   try {
-    if (typeof ForegroundService.start !== "function") return;
-    await ForegroundService.start(buildForegroundNotification(options));
+    if (Platform.OS !== "android") return;
+    await ensureNotificationPermission();
+    const foregroundServiceTypes = await getForegroundServiceTypes(
+      options?.includeCamera ?? false
+    );
+    const notification = await buildForegroundNotification({
+      ...options,
+      foregroundServiceTypes,
+    });
+    await notifee.displayNotification(notification);
   } catch (error) {
     console.warn("[ForegroundService] start failed", error);
   }
 }
 
-export async function updateForegroundCallService(options?: { roomId?: string }) {
-  const ForegroundService = getForegroundService();
-  if (!ForegroundService) return;
+export async function updateForegroundCallService(options?: {
+  roomId?: string;
+  includeCamera?: boolean;
+  isMuted?: boolean;
+}) {
   try {
-    if (typeof ForegroundService.update !== "function") return;
-    await ForegroundService.update(buildForegroundNotification(options));
+    if (Platform.OS !== "android") return;
+    await ensureNotificationPermission();
+    const foregroundServiceTypes = await getForegroundServiceTypes(
+      options?.includeCamera ?? false
+    );
+    const notification = await buildForegroundNotification({
+      ...options,
+      foregroundServiceTypes,
+    });
+    await notifee.displayNotification(notification);
   } catch (error) {
     console.warn("[ForegroundService] update failed", error);
   }
 }
 
 export async function stopForegroundCallService() {
-  const ForegroundService = getForegroundService();
-  if (!ForegroundService) return;
   try {
-    if (typeof ForegroundService.stop === "function") {
-      await ForegroundService.stop();
-      return;
-    }
-    if (typeof ForegroundService.stopAll === "function") {
-      await ForegroundService.stopAll();
-    }
+    if (Platform.OS !== "android") return;
+    await notifee.stopForegroundService();
+    await notifee.cancelNotification(FOREGROUND_NOTIFICATION_ID);
   } catch (error) {
     console.warn("[ForegroundService] stop failed", error);
   }
@@ -138,28 +162,19 @@ export async function stopForegroundCallService() {
 export function registerForegroundCallServiceHandlers(handlers: {
   onLeave?: () => void;
   onOpen?: () => void;
+  onToggleMute?: () => void;
 }) {
   if (foregroundActionsCleanup) {
     foregroundActionsCleanup();
     foregroundActionsCleanup = null;
   }
-  const ForegroundService = getForegroundService();
-  if (!ForegroundService || typeof ForegroundService.eventListener !== "function") {
-    return () => {};
-  }
-
-  foregroundActionsCleanup = ForegroundService.eventListener((event) => {
-    if (!event) return;
-    const action = event.button || event.main;
-    if (!action) return;
-    if (action === FOREGROUND_ACTION_LEAVE) {
-      handlers.onLeave?.();
-      return;
-    }
-    if (action === FOREGROUND_ACTION_OPEN) {
-      handlers.onOpen?.();
-    }
+  setForegroundActionHandlers({
+    onLeave: handlers.onLeave,
+    onOpen: handlers.onOpen,
   });
+  foregroundActionsCleanup = () => {
+    clearForegroundActionHandlers();
+  };
 
   return () => {
     if (foregroundActionsCleanup) {
@@ -202,23 +217,72 @@ export function registerCallKeepHandlers(onHangup: () => void) {
   };
 }
 
-function buildForegroundNotification(options?: { roomId?: string }) {
+async function buildForegroundNotification(options?: {
+  roomId?: string;
+  foregroundServiceTypes?: AndroidForegroundServiceType[];
+  isMuted?: boolean;
+}) {
+  const channelId = await getForegroundChannel();
   const roomId = options?.roomId?.trim();
-  const message = roomId
-    ? `Meeting code: ${roomId}`
-    : "Meeting in progress";
+  const message = roomId ? `Meeting code: ${roomId}` : "Meeting in progress";
+  const muteTitle = options?.isMuted ? "Unmute" : "Mute";
   return {
     id: FOREGROUND_NOTIFICATION_ID,
     title: "Conclave",
-    message,
-    importance: "high",
-    visibility: "public",
-    vibration: false,
-    color: FOREGROUND_COLOR,
-    ServiceType: "camera|microphone",
-    button: true,
-    buttonText: "Leave",
-    buttonOnPress: FOREGROUND_ACTION_LEAVE,
-    mainOnPress: FOREGROUND_ACTION_OPEN,
+    body: message,
+    android: {
+      channelId,
+      asForegroundService: true,
+      color: FOREGROUND_COLOR,
+      colorized: true,
+      importance: AndroidImportance.HIGH,
+      visibility: AndroidVisibility.PUBLIC,
+      smallIcon: "ic_notification",
+      ongoing: true,
+      onlyAlertOnce: true,
+      foregroundServiceTypes: options?.foregroundServiceTypes,
+      pressAction: {
+        id: FOREGROUND_ACTION_OPEN,
+        launchActivity: "default",
+      },
+      actions: [
+        {
+          title: "Leave",
+          pressAction: { id: FOREGROUND_ACTION_LEAVE },
+        },
+        {
+          title: muteTitle,
+          pressAction: { id: FOREGROUND_ACTION_TOGGLE_MUTE },
+        },
+      ],
+    },
   };
+}
+
+async function getForegroundServiceTypes(includeCamera: boolean) {
+  const types = [AndroidForegroundServiceType.FOREGROUND_SERVICE_TYPE_MICROPHONE];
+  if (!includeCamera) return types;
+
+  try {
+    const hasCameraPermission = await PermissionsAndroid.check(
+      PermissionsAndroid.PERMISSIONS.CAMERA
+    );
+    if (hasCameraPermission) {
+      types.unshift(AndroidForegroundServiceType.FOREGROUND_SERVICE_TYPE_CAMERA);
+    }
+  } catch (error) {
+    console.warn("[ForegroundService] camera permission check failed", error);
+  }
+
+  return types;
+}
+
+async function ensureNotificationPermission() {
+  try {
+    const settings = await notifee.getNotificationSettings();
+    if (settings.authorizationStatus === AuthorizationStatus.AUTHORIZED) return;
+    await notifee.requestPermission();
+  } catch (error) {
+    console.warn("[ForegroundService] notification permission check failed", error);
+  }
 }

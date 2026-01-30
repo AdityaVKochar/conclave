@@ -1738,7 +1738,7 @@ export function useMeetSocket({
     ]
   );
 
-  const handleReconnect = useCallback(async () => {
+  const handleReconnect = useCallback(async (options?: { immediate?: boolean }) => {
     if (reconnectInFlightRef.current) return;
     reconnectInFlightRef.current = true;
 
@@ -1750,8 +1750,9 @@ export function useMeetSocket({
         }
         setConnectionState("reconnecting");
         reconnectAttemptsRef.current++;
-        const delay =
-          RECONNECT_DELAY_MS * 2 ** (reconnectAttemptsRef.current - 1);
+        const delay = options?.immediate
+          ? 0
+          : RECONNECT_DELAY_MS * 2 ** (reconnectAttemptsRef.current - 1);
 
         console.log(
           `[Meets] Reconnecting in ${delay}ms (attempt ${reconnectAttemptsRef.current})`

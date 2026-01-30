@@ -115,6 +115,8 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
     isRoomLocked,
     setIsRoomLocked,
   } = useMeetState({ initialRoomId });
+  const isCameraOffRef = useRef(isCameraOff);
+  const isMutedRef = useRef(isMuted);
   const shouldKeepAliveInBackground = isScreenSharing || !!activeScreenShareId;
 
   const {
@@ -220,6 +222,7 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
   });
 
   const {
+    mediaState,
     showPermissionHint,
     requestMediaPermissions,
     updateVideoQualityRef,
@@ -273,11 +276,27 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
     connectionState === "reconnecting" ||
     connectionState === "waiting";
 
+  const forceReconnect = useCallback(() => {
+    if (!hasActiveCall) return;
+    if (connectionState === "joined") return;
+    refs.reconnectAttemptsRef.current = 0;
+    refs.reconnectInFlightRef.current = false;
+    refs.handleReconnectRef.current?.({ immediate: true });
+  }, [connectionState, hasActiveCall, refs]);
+
   useEffect(() => {
     if (isJoined) {
       setHasActiveCall(true);
     }
   }, [isJoined]);
+
+  useEffect(() => {
+    isCameraOffRef.current = isCameraOff;
+  }, [isCameraOff]);
+
+  useEffect(() => {
+    isMutedRef.current = isMuted;
+  }, [isMuted]);
 
   useEffect(() => {
     if (
@@ -298,7 +317,7 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
     const subscription = AppState.addEventListener("change", (state) => {
       const isActive = state === "active";
       isAppActiveRef.current = isActive;
-      if (!isJoined) return;
+      if (!isJoined && !hasActiveCall) return;
 
       if (!isActive) {
         wasCameraOnBeforeBackgroundRef.current = !isCameraOff;
@@ -309,6 +328,10 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
           stopAudioKeepAlive();
         }
         return;
+      }
+
+      if (Platform.OS === "android") {
+        forceReconnect();
       }
 
       if (Platform.OS === "ios") {
@@ -326,6 +349,7 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
     };
   }, [
     isJoined,
+    hasActiveCall,
     isCameraOff,
     isMuted,
     toggleCamera,
@@ -333,6 +357,7 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
     startAudioKeepAlive,
     stopAudioKeepAlive,
     shouldKeepAliveInBackground,
+    forceReconnect,
   ]);
 
   useEffect(() => {
@@ -515,10 +540,17 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
 
     (async () => {
       if (Platform.OS === "android") {
-        await startForegroundCallService({ roomId: roomIdRef.current || roomId });
+        await startForegroundCallService({
+          roomId: roomIdRef.current || roomId,
+          includeCamera: !isCameraOffRef.current,
+          isMuted: isMutedRef.current,
+        });
         foregroundStarted = true;
         foregroundActionsCleanup = registerForegroundCallServiceHandlers({
           onLeave: handleLeave,
+          onToggleMute: () => {
+            void toggleMute();
+          },
         });
       }
       await ensureCallKeep();
@@ -551,8 +583,20 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
   useEffect(() => {
     if (!hasActiveCall) return;
     if (Platform.OS !== "android") return;
-    void updateForegroundCallService({ roomId });
-  }, [hasActiveCall, roomId]);
+    void updateForegroundCallService({
+      roomId,
+      includeCamera: !isCameraOff,
+      isMuted,
+    });
+  }, [hasActiveCall, roomId, isCameraOff, isMuted]);
+
+  const handleRequestPermissions = useCallback(async () => {
+    try {
+      await requestMediaPermissions({ forceVideo: true });
+    } catch (err) {
+      setMeetError(createMeetError(err));
+    }
+  }, [requestMediaPermissions, setMeetError]);
 
   const handleRetryPermissions = useCallback(async () => {
     if (Platform.OS === "ios") {
@@ -789,9 +833,13 @@ export function MeetScreen({ initialRoomId }: { initialRoomId?: string } = {}) {
           onToggleMute={toggleMute}
           onToggleCamera={toggleCamera}
           showPermissionHint={showPermissionHint}
+          hasAudioPermission={mediaState.hasAudioPermission}
+          hasVideoPermission={mediaState.hasVideoPermission}
+          permissionsReady={mediaState.permissionsReady}
           meetError={meetError}
           onDismissMeetError={() => setMeetError(null)}
           onRetryMedia={handleRetryPermissions}
+          onRequestMedia={handleRequestPermissions}
         />
       ) : (
         <CallScreen
