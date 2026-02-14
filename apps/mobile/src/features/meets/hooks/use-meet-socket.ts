@@ -103,6 +103,7 @@ interface UseMeetSocketOptions {
     isReady: boolean;
     getCachedToken?: (roomId: string) => { token: string; sfuUrl: string } | null;
   };
+  onSocketReady?: (socket: Socket | null) => void;
 }
 
 export function useMeetSocket({
@@ -146,6 +147,7 @@ export function useMeetSocket({
   isAppActiveRef,
   onTtsMessage,
   prewarm,
+  onSocketReady,
 }: UseMeetSocketOptions) {
   const now = useCallback(
     () =>
@@ -293,9 +295,9 @@ export function useMeetSocket({
     localStream?.getTracks().forEach((track) => {
       stopLocalTrack(track);
     });
-
     socketRef.current?.disconnect();
     socketRef.current = null;
+    onSocketReady?.(null);
     deviceRef.current = null;
     lastAuthIsHostRef.current = null;
 
@@ -316,6 +318,7 @@ export function useMeetSocket({
     stopLocalTrack,
     producerSyncIntervalRef,
     lastAuthIsHostRef,
+    onSocketReady,
   ]);
 
   const scheduleParticipantRemoval = useCallback(
@@ -1680,6 +1683,7 @@ export function useMeetSocket({
             );
 
             socketRef.current = socket;
+            onSocketReady?.(socket);
           } catch (err) {
             console.error("Failed to get join info:", err);
             setMeetError({
@@ -1739,6 +1743,7 @@ export function useMeetSocket({
       userId,
       onTtsMessage,
       lastAuthIsHostRef,
+      onSocketReady,
     ]
   );
 
@@ -1768,6 +1773,7 @@ export function useMeetSocket({
           cleanupRoomResources({ resetRoomId: false });
           socketRef.current?.disconnect();
           socketRef.current = null;
+          onSocketReady?.(null);
           if (!reconnectRoomId) {
             throw new Error("Missing room ID for reconnect");
           }

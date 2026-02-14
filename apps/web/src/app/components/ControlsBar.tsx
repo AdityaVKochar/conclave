@@ -61,6 +61,11 @@ interface ControlsBarProps {
   hasBrowserAudio?: boolean;
   isBrowserAudioMuted?: boolean;
   onToggleBrowserAudio?: () => void;
+  isWhiteboardActive?: boolean;
+  onOpenWhiteboard?: () => void;
+  onCloseWhiteboard?: () => void;
+  isAppsLocked?: boolean;
+  onToggleAppsLock?: () => void;
 }
 
 const BROWSER_APPS = [
@@ -160,14 +165,21 @@ function ControlsBar({
   hasBrowserAudio = false,
   isBrowserAudioMuted = false,
   onToggleBrowserAudio,
+  isWhiteboardActive = false,
+  onOpenWhiteboard,
+  onCloseWhiteboard,
+  isAppsLocked = false,
+  onToggleAppsLock,
 }: ControlsBarProps) {
   const canStartScreenShare = !activeScreenShareId || isScreenSharing;
   const [isReactionMenuOpen, setIsReactionMenuOpen] = useState(false);
   const [isBrowserMenuOpen, setIsBrowserMenuOpen] = useState(false);
+  const [isAppsMenuOpen, setIsAppsMenuOpen] = useState(false);
   const [browserUrlInput, setBrowserUrlInput] = useState("");
   const [browserUrlError, setBrowserUrlError] = useState<string | null>(null);
   const reactionMenuRef = useRef<HTMLDivElement>(null);
   const browserMenuRef = useRef<HTMLDivElement>(null);
+  const appsMenuRef = useRef<HTMLDivElement>(null);
   const lastReactionTimeRef = useRef<number>(0);
   const REACTION_COOLDOWN_MS = 150;
 
@@ -209,6 +221,19 @@ function ControlsBar({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isBrowserMenuOpen]);
+
+  useEffect(() => {
+    if (!isAppsMenuOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (appsMenuRef.current && !appsMenuRef.current.contains(event.target as Node)) {
+        setIsAppsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isAppsMenuOpen]);
 
   const handleReactionClick = useCallback(
     (reaction: ReactionOption) => {
@@ -562,6 +587,48 @@ function ControlsBar({
                 )}
               </button>
             ))}
+          </div>
+        )}
+      </div>
+
+      <div ref={appsMenuRef} className="relative">
+        <button
+          onClick={() => setIsAppsMenuOpen((prev) => !prev)}
+          className={defaultButtonClass}
+          title="Apps"
+          aria-label="Apps"
+        >
+          <LayoutGrid className="w-4 h-4" />
+        </button>
+
+        {isAppsMenuOpen && (
+          <div className="absolute bottom-14 left-1/2 -translate-x-1/2 w-56 rounded-xl border border-white/10 bg-[#0f0f0f] p-3 shadow-xl">
+            <button
+              type="button"
+              onClick={() => {
+                if (isWhiteboardActive) {
+                  onCloseWhiteboard?.();
+                } else {
+                  onOpenWhiteboard?.();
+                }
+                setIsAppsMenuOpen(false);
+              }}
+              className="w-full text-left px-3 py-2 rounded-lg text-sm text-[#FEFCD9]/80 hover:bg-white/10"
+            >
+              {isWhiteboardActive ? "Close whiteboard" : "Open whiteboard"}
+            </button>
+            {onToggleAppsLock && (
+              <button
+                type="button"
+                onClick={() => {
+                  onToggleAppsLock();
+                  setIsAppsMenuOpen(false);
+                }}
+                className="mt-2 w-full text-left px-3 py-2 rounded-lg text-sm text-[#FEFCD9]/60 hover:bg-white/10"
+              >
+                {isAppsLocked ? "Unlock editing" : "Lock editing"}
+              </button>
+            )}
           </div>
         )}
       </div>

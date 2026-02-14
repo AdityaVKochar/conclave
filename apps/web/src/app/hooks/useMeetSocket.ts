@@ -104,6 +104,7 @@ interface UseMeetSocketOptions {
     isReady: boolean;
     getCachedToken?: (roomId: string) => { token: string; sfuUrl: string } | null;
   };
+  onSocketReady?: (socket: Socket | null) => void;
 }
 
 export function useMeetSocket({
@@ -146,6 +147,7 @@ export function useMeetSocket({
   chat,
   onTtsMessage,
   prewarm,
+  onSocketReady,
 }: UseMeetSocketOptions) {
   const {
     socketRef,
@@ -278,6 +280,7 @@ export function useMeetSocket({
 
     socketRef.current?.disconnect();
     socketRef.current = null;
+    onSocketReady?.(null);
     deviceRef.current = null;
 
     setConnectionState("disconnected");
@@ -296,6 +299,7 @@ export function useMeetSocket({
     deviceRef,
     stopLocalTrack,
     producerSyncIntervalRef,
+    onSocketReady,
   ]);
 
   const scheduleParticipantRemoval = useCallback(
@@ -1603,6 +1607,7 @@ export function useMeetSocket({
             );
 
             socketRef.current = socket;
+            onSocketReady?.(socket);
           } catch (err) {
             console.error("Failed to get join info:", err);
             setMeetError({
@@ -1661,6 +1666,7 @@ export function useMeetSocket({
       user,
       userId,
       onTtsMessage,
+      onSocketReady,
     ]
   );
 
@@ -1685,6 +1691,7 @@ export function useMeetSocket({
           cleanupRoomResources({ resetRoomId: false });
           socketRef.current?.disconnect();
           socketRef.current = null;
+          onSocketReady?.(null);
           if (!reconnectRoomId) {
             throw new Error("Missing room ID for reconnect");
           }

@@ -2,7 +2,7 @@
 
 import { RefreshCw, UserX } from "lucide-react";
 import Image from "next/image";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { Socket } from "socket.io-client";
 import type { RoomInfo } from "@/lib/sfu-types";
@@ -17,6 +17,7 @@ import PresentationLayout from "./PresentationLayout";
 import ReactionOverlay from "./ReactionOverlay";
 import BrowserLayout from "./BrowserLayout";
 import SystemAudioPlayers from "./SystemAudioPlayers";
+import WhiteboardLayout from "./WhiteboardLayout";
 import type { BrowserState } from "../hooks/useSharedBrowser";
 import type { ParticipantsPanelGetRooms } from "./ParticipantsPanel";
 import type {
@@ -28,6 +29,7 @@ import type {
   ReactionOption,
 } from "../lib/types";
 import { isBrowserVideoUserId, isSystemUserId } from "../lib/utils";
+import { useApps } from "@conclave/apps-sdk";
 
 interface MeetsMainContentProps {
   isJoined: boolean;
@@ -194,6 +196,19 @@ export default function MeetsMainContent({
   onRetryMedia,
   onTestSpeaker,
 }: MeetsMainContentProps) {
+  const { state: appsState, openApp, closeApp, setLocked, refreshState } = useApps();
+  const isWhiteboardActive = appsState.activeAppId === "whiteboard";
+  const handleOpenWhiteboard = useCallback(() => openApp("whiteboard"), [openApp]);
+  const handleCloseWhiteboard = useCallback(() => closeApp(), [closeApp]);
+  const handleToggleAppsLock = useCallback(
+    () => setLocked(!appsState.locked),
+    [appsState.locked, setLocked]
+  );
+  useEffect(() => {
+    if (connectionState === "joined") {
+      refreshState();
+    }
+  }, [connectionState, refreshState]);
   const participantsArray = useMemo(
     () => Array.from(participants.values()),
     [participants]
@@ -299,6 +314,21 @@ export default function MeetsMainContent({
           onDismissMeetError={onDismissMeetError}
           onRetryMedia={onRetryMedia}
           onTestSpeaker={onTestSpeaker}
+        />
+      ) : isWhiteboardActive ? (
+        <WhiteboardLayout
+          localStream={localStream}
+          isCameraOff={isCameraOff}
+          isMuted={isMuted}
+          isHandRaised={isHandRaised}
+          isGhost={ghostEnabled}
+          participants={participants}
+          userEmail={userEmail}
+          isMirrorCamera={isMirrorCamera}
+          activeSpeakerId={activeSpeakerId}
+          currentUserId={currentUserId}
+          audioOutputDeviceId={audioOutputDeviceId}
+          getDisplayName={resolveDisplayName}
         />
       ) : browserState?.active && browserState.noVncUrl ? (
         <BrowserLayout
@@ -416,6 +446,11 @@ export default function MeetsMainContent({
               hasBrowserAudio={hasBrowserAudio}
               isBrowserAudioMuted={isBrowserAudioMuted}
               onToggleBrowserAudio={onToggleBrowserAudio}
+              isWhiteboardActive={isWhiteboardActive}
+              onOpenWhiteboard={handleOpenWhiteboard}
+              onCloseWhiteboard={handleCloseWhiteboard}
+              isAppsLocked={appsState.locked}
+              onToggleAppsLock={isAdmin ? handleToggleAppsLock : undefined}
             />
           </div>
           <div className="flex items-center gap-4">

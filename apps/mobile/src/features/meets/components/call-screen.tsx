@@ -12,6 +12,8 @@ import { ParticipantTile } from "./participant-tile";
 import { FlatList, Text, Pressable } from "@/tw";
 import { Lock, Settings, Users, MicOff, VenetianMask } from "lucide-react-native";
 import { GlassPill } from "./glass-pill";
+import { useApps } from "@conclave/apps-sdk";
+import { WhiteboardNativeApp } from "@conclave/apps-sdk/whiteboard/native";
 
 const COLORS = {
   primaryOrange: "#F95F4A",
@@ -93,6 +95,18 @@ export function CallScreen({
   presentationStream = null,
   presenterName = "",
 }: CallScreenProps) {
+  const { state: appsState, openApp, closeApp, setLocked, refreshState } = useApps();
+  const isWhiteboardActive = appsState.activeAppId === "whiteboard";
+  const handleOpenWhiteboard = useCallback(() => openApp("whiteboard"), [openApp]);
+  const handleCloseWhiteboard = useCallback(() => closeApp(), [closeApp]);
+  const handleToggleAppsLock = useCallback(
+    () => setLocked(!appsState.locked),
+    [appsState.locked, setLocked]
+  );
+  const handleToggleWhiteboard = useCallback(
+    () => (isWhiteboardActive ? handleCloseWhiteboard() : handleOpenWhiteboard()),
+    [isWhiteboardActive, handleCloseWhiteboard, handleOpenWhiteboard]
+  );
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const { layout, isTablet } = useDeviceLayout();
@@ -140,6 +154,12 @@ export function CallScreen({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (connectionState === "joined") {
+      refreshState();
+    }
+  }, [connectionState, refreshState]);
 
   const participantList = useMemo(() => {
     const list = Array.from(participants.values()).filter(
@@ -262,7 +282,11 @@ export function CallScreen({
         )}
       </RNView>
 
-        {isPresenting && presentationStream ? (
+        {isWhiteboardActive ? (
+          <RNView style={[styles.whiteboardContainer, { paddingBottom: 140 + insets.bottom }]}>
+            <WhiteboardNativeApp />
+          </RNView>
+        ) : isPresenting && presentationStream ? (
           <RNView
             style={[
               styles.presentationContainer,
@@ -384,6 +408,10 @@ export function CallScreen({
         onToggleChat={onToggleChat}
         onToggleParticipants={onToggleParticipants}
         onToggleRoomLock={onToggleRoomLock}
+        isWhiteboardActive={isWhiteboardActive}
+        isAppsLocked={appsState.locked}
+        onToggleWhiteboard={handleToggleWhiteboard}
+        onToggleAppsLock={handleToggleAppsLock}
         onSendReaction={onSendReaction}
         onLeave={onLeave}
       />
@@ -501,6 +529,11 @@ const styles = StyleSheet.create({
   presentationContainer: {
     flex: 1,
     gap: 12,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+  },
+  whiteboardContainer: {
+    flex: 1,
     paddingHorizontal: 12,
     paddingTop: 8,
   },
