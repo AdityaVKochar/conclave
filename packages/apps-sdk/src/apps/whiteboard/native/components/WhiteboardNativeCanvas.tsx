@@ -4,12 +4,14 @@ import {
   StyleSheet,
   View,
   Text as RNText,
+  TextInput,
   Image,
   type LayoutChangeEvent,
+  type GestureResponderEvent,
 } from "react-native";
 import type * as Y from "yjs";
 import type { Awareness } from "y-protocols/awareness";
-import { Canvas, Path, Rect, Oval, Line, Skia } from "@shopify/react-native-skia";
+import { Canvas, Path, Rect, Oval, Line, Skia, Group } from "@shopify/react-native-skia";
 import { buildRenderList } from "../../core/exports/renderList";
 import type { ToolKind, ToolSettings } from "../../core/tools/engine";
 import { ToolEngine } from "../../core/tools/engine";
@@ -29,6 +31,12 @@ export type WhiteboardNativeCanvasProps = {
   locked: boolean;
   user?: AppUser;
   states?: PresenceState[];
+  onRequestTextEdit?: (elementId: string, currentText: string) => void;
+  editingText?: { elementId: string; text: string } | null;
+  onEditingTextChange?: (text: string) => void;
+  onEditingTextSubmit?: () => void;
+  onEditingTextBlur?: () => void;
+  onEditingTextCancel?: () => void;
 };
 
 const seedFrom = (value: string): number => {
@@ -220,6 +228,12 @@ export function WhiteboardNativeCanvas({
   locked,
   user,
   states = [],
+  onRequestTextEdit,
+  editingText,
+  onEditingTextChange,
+  onEditingTextSubmit,
+  onEditingTextBlur,
+  onEditingTextCancel,
 }: WhiteboardNativeCanvasProps) {
   const engineRef = useRef<ToolEngine | null>(null);
   const cursorRafRef = useRef<number | null>(null);
@@ -228,6 +242,36 @@ export function WhiteboardNativeCanvas({
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const elements = useWhiteboardElements(doc, pageId);
   const renderList = useMemo(() => buildRenderList(elements), [elements]);
+
+  const [viewport, setViewport] = useState({ x: 0, y: 0, scale: 1 });
+  const pinchRef = useRef<{
+    active: boolean;
+    initialDistance: number;
+    initialScale: number;
+    initialMidX: number;
+    initialMidY: number;
+    initialOffsetX: number;
+    initialOffsetY: number;
+  } | null>(null);
+  const panRef = useRef<{
+    active: boolean;
+    startX: number;
+    startY: number;
+    initialOffsetX: number;
+    initialOffsetY: number;
+  } | null>(null);
+
+  const MIN_SCALE = 0.25;
+  const MAX_SCALE = 5;
+
+  /** Convert a screen-space point to canvas-space */
+  const toCanvas = useCallback(
+    (sx: number, sy: number) => ({
+      x: (sx - viewport.x) / viewport.scale,
+      y: (sy - viewport.y) / viewport.scale,
+    }),
+    [viewport],
+  );
 
   useEffect(() => {
     if (!engineRef.current) {
@@ -285,42 +329,141 @@ export function WhiteboardNativeCanvas({
     };
   }, [clearCursor]);
 
+  const getTouches = (event: GestureResponderEvent) => {
+    const touches = event.nativeEvent.touches;
+    if (!touches || touches.length === 0) {
+      return [{ x: event.nativeEvent.locationX, y: event.nativeEvent.locationY }];
+    }
+    return Array.from(touches).map((t: any) => ({
+      x: t.locationX ?? t.pageX,
+      y: t.locationY ?? t.pageY,
+    }));
+  };
+
+  const getDistance = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+    Math.hypot(b.x - a.x, b.y - a.y);
+
   const panResponder = useMemo(
     () =>
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: () => true,
         onPanResponderGrant: (event) => {
-          const { locationX, locationY, force } = event.nativeEvent;
-          if (!locked) {
-            engineRef.current?.onPointerDown({ x: locationX, y: locationY, pressure: force });
-            setSelectedId(engineRef.current?.getSelectedId() ?? null);
+          const touches = getTouches(event);
+          const { force } = event.nativeEvent;
+
+          if (touches.length >= 2) {
+            const dist = getDistance(touches[0], touches[1]);
+            const midX = (touches[0].x + touches[1].x) / 2;
+            const midY = (touches[0].y + touches[1].y) / 2;
+            pinchRef.current = {
+              active: true,
+              initialDistance: dist,
+              initialScale: viewport.scale,
+              initialMidX: midX,
+              initialMidY: midY,
+              initialOffsetX: viewport.x,
+              initialOffsetY: viewport.y,
+            };
+            panRef.current = null;
+          } else {
+            const pt = toCanvas(touches[0].x, touches[0].y);
+            if (!locked) {
+              engineRef.current?.onPointerDown({ x: pt.x, y: pt.y, pressure: force });
+              const newSelectedId = engineRef.current?.getSelectedId() ?? null;
+              setSelectedId(newSelectedId);
+
+              // Trigger text editing on text/sticky creation or selection
+              if (newSelectedId && onRequestTextEdit) {
+                const el = elements.find((e) => e.id === newSelectedId);
+                if (el && (el.type === "text" || el.type === "sticky")) {
+                  // Existing element tapped
+                  onRequestTextEdit(el.id, el.text);
+                } else if (tool === "text" || tool === "sticky") {
+                  // Newly created element — text is "" or default
+                  onRequestTextEdit(
+                    newSelectedId,
+                    tool === "sticky" ? "Sticky note" : "",
+                  );
+                }
+              }
+            }
+            scheduleCursorSync(pt.x, pt.y);
+            pinchRef.current = null;
+            panRef.current = null;
           }
-          scheduleCursorSync(locationX, locationY);
         },
         onPanResponderMove: (event) => {
-          const { locationX, locationY, force } = event.nativeEvent;
-          if (!locked) {
-            engineRef.current?.onPointerMove({ x: locationX, y: locationY, pressure: force });
+          const touches = getTouches(event);
+          const { force } = event.nativeEvent;
+
+          if (touches.length >= 2) {
+            const dist = getDistance(touches[0], touches[1]);
+            const midX = (touches[0].x + touches[1].x) / 2;
+            const midY = (touches[0].y + touches[1].y) / 2;
+
+            if (!pinchRef.current) {
+              if (!locked) {
+                engineRef.current?.onPointerUp();
+              }
+              pinchRef.current = {
+                active: true,
+                initialDistance: dist,
+                initialScale: viewport.scale,
+                initialMidX: midX,
+                initialMidY: midY,
+                initialOffsetX: viewport.x,
+                initialOffsetY: viewport.y,
+              };
+              return;
+            }
+
+            const pinch = pinchRef.current;
+            const rawScale = (dist / pinch.initialDistance) * pinch.initialScale;
+            const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, rawScale));
+
+            const scaleRatio = newScale / pinch.initialScale;
+            const newX =
+              midX - (pinch.initialMidX - pinch.initialOffsetX) * scaleRatio +
+              (midX - pinch.initialMidX);
+            const newY =
+              midY - (pinch.initialMidY - pinch.initialOffsetY) * scaleRatio +
+              (midY - pinch.initialMidY);
+
+            setViewport({ x: newX, y: newY, scale: newScale });
+          } else if (!pinchRef.current) {
+            // Single finger draw
+            const pt = toCanvas(touches[0].x, touches[0].y);
+            if (!locked) {
+              engineRef.current?.onPointerMove({ x: pt.x, y: pt.y, pressure: force });
+            }
+            scheduleCursorSync(pt.x, pt.y);
           }
-          scheduleCursorSync(locationX, locationY);
         },
         onPanResponderRelease: () => {
-          if (!locked) {
-            engineRef.current?.onPointerUp();
-            setSelectedId(engineRef.current?.getSelectedId() ?? null);
+          if (!pinchRef.current) {
+            if (!locked) {
+              engineRef.current?.onPointerUp();
+              setSelectedId(engineRef.current?.getSelectedId() ?? null);
+            }
+            clearCursor();
           }
-          clearCursor();
+          pinchRef.current = null;
+          panRef.current = null;
         },
         onPanResponderTerminate: () => {
-          if (!locked) {
-            engineRef.current?.onPointerUp();
-            setSelectedId(engineRef.current?.getSelectedId() ?? null);
+          if (!pinchRef.current) {
+            if (!locked) {
+              engineRef.current?.onPointerUp();
+              setSelectedId(engineRef.current?.getSelectedId() ?? null);
+            }
+            clearCursor();
           }
-          clearCursor();
+          pinchRef.current = null;
+          panRef.current = null;
         },
       }),
-    [locked, clearCursor, scheduleCursorSync],
+    [locked, clearCursor, scheduleCursorSync, viewport, toCanvas, tool, elements, onRequestTextEdit],
   );
 
   const textElements = useMemo(
@@ -374,21 +517,31 @@ export function WhiteboardNativeCanvas({
       return { minorVertical, minorHorizontal, majorVertical, majorHorizontal };
     }
 
-    for (let x = 0; x <= canvasSize.width; x += minorStep) {
+    const vLeft = -viewport.x / viewport.scale;
+    const vTop = -viewport.y / viewport.scale;
+    const vRight = (canvasSize.width - viewport.x) / viewport.scale;
+    const vBottom = (canvasSize.height - viewport.y) / viewport.scale;
+
+    const startMinorX = Math.floor(vLeft / minorStep) * minorStep;
+    const startMinorY = Math.floor(vTop / minorStep) * minorStep;
+    for (let x = startMinorX; x <= vRight; x += minorStep) {
       minorVertical.push(x);
     }
-    for (let y = 0; y <= canvasSize.height; y += minorStep) {
+    for (let y = startMinorY; y <= vBottom; y += minorStep) {
       minorHorizontal.push(y);
     }
-    for (let x = 0; x <= canvasSize.width; x += majorStep) {
+
+    const startMajorX = Math.floor(vLeft / majorStep) * majorStep;
+    const startMajorY = Math.floor(vTop / majorStep) * majorStep;
+    for (let x = startMajorX; x <= vRight; x += majorStep) {
       majorVertical.push(x);
     }
-    for (let y = 0; y <= canvasSize.height; y += majorStep) {
+    for (let y = startMajorY; y <= vBottom; y += majorStep) {
       majorHorizontal.push(y);
     }
 
     return { minorVertical, minorHorizontal, majorVertical, majorHorizontal };
-  }, [canvasSize.height, canvasSize.width]);
+  }, [canvasSize.height, canvasSize.width, viewport]);
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
@@ -401,40 +554,47 @@ export function WhiteboardNativeCanvas({
   return (
     <View style={styles.container} {...panResponder.panHandlers} onLayout={handleLayout}>
       <Canvas style={StyleSheet.absoluteFill}>
+        <Group
+          transform={[
+            { translateX: viewport.x },
+            { translateY: viewport.y },
+            { scale: viewport.scale },
+          ]}
+        >
         {gridLines.minorVertical.map((x) => (
           <Line
             key={`grid-minor-v-${x}`}
-            p1={{ x, y: 0 }}
-            p2={{ x, y: canvasSize.height }}
+            p1={{ x, y: -viewport.y / viewport.scale - 100 }}
+            p2={{ x, y: (canvasSize.height - viewport.y) / viewport.scale + 100 }}
             color="rgba(254,252,217,0.035)"
-            strokeWidth={1}
+            strokeWidth={1 / viewport.scale}
           />
         ))}
         {gridLines.minorHorizontal.map((y) => (
           <Line
             key={`grid-minor-h-${y}`}
-            p1={{ x: 0, y }}
-            p2={{ x: canvasSize.width, y }}
+            p1={{ x: -viewport.x / viewport.scale - 100, y }}
+            p2={{ x: (canvasSize.width - viewport.x) / viewport.scale + 100, y }}
             color="rgba(254,252,217,0.035)"
-            strokeWidth={1}
+            strokeWidth={1 / viewport.scale}
           />
         ))}
         {gridLines.majorVertical.map((x) => (
           <Line
             key={`grid-major-v-${x}`}
-            p1={{ x, y: 0 }}
-            p2={{ x, y: canvasSize.height }}
+            p1={{ x, y: -viewport.y / viewport.scale - 100 }}
+            p2={{ x, y: (canvasSize.height - viewport.y) / viewport.scale + 100 }}
             color="rgba(249,95,74,0.08)"
-            strokeWidth={1}
+            strokeWidth={1 / viewport.scale}
           />
         ))}
         {gridLines.majorHorizontal.map((y) => (
           <Line
             key={`grid-major-h-${y}`}
-            p1={{ x: 0, y }}
-            p2={{ x: canvasSize.width, y }}
+            p1={{ x: -viewport.x / viewport.scale - 100, y }}
+            p2={{ x: (canvasSize.width - viewport.x) / viewport.scale + 100, y }}
             color="rgba(249,95,74,0.08)"
-            strokeWidth={1}
+            strokeWidth={1 / viewport.scale}
           />
         ))}
         {renderList.map((element) => renderElement(element))}
@@ -472,19 +632,67 @@ export function WhiteboardNativeCanvas({
               />
             );
           })}
+        </Group>
       </Canvas>
 
       {textElements.map((element) => {
+        const isEditing = editingText?.elementId === element.id;
+
         if (element.type === "text") {
+          const left = element.x * viewport.scale + viewport.x;
+          const top = element.y * viewport.scale + viewport.y;
+          const fontSize = element.fontSize * viewport.scale;
+
+          if (isEditing) {
+            return (
+              <View
+                key={element.id}
+                style={{
+                  position: "absolute",
+                  left,
+                  top,
+                  minWidth: 120 * viewport.scale,
+                  maxWidth: 300 * viewport.scale,
+                }}
+              >
+                <TextInput
+                  style={{
+                    color: element.color,
+                    fontSize,
+                    padding: 0,
+                    margin: 0,
+                    minHeight: fontSize + 8,
+                    backgroundColor: "rgba(0,0,0,0.35)",
+                    borderRadius: 4,
+                    paddingHorizontal: 4,
+                    paddingVertical: 2,
+                    borderWidth: 1,
+                    borderColor: "rgba(249,95,74,0.6)",
+                  }}
+                  value={editingText.text}
+                  onChangeText={onEditingTextChange}
+                  onSubmitEditing={onEditingTextSubmit}
+                  onBlur={onEditingTextBlur}
+                  autoFocus
+                  multiline
+                  blurOnSubmit={false}
+                  placeholder="Type here…"
+                  placeholderTextColor="rgba(254,252,217,0.3)"
+                />
+              </View>
+            );
+          }
+
           return (
             <RNText
               key={element.id}
+              pointerEvents="none"
               style={{
                 position: "absolute",
-                left: element.x,
-                top: element.y,
+                left,
+                top,
                 color: element.color,
-                fontSize: element.fontSize,
+                fontSize,
               }}
             >
               {element.text}
@@ -493,15 +701,54 @@ export function WhiteboardNativeCanvas({
         }
 
         if (element.type === "sticky") {
+          const left = (element.x + 8) * viewport.scale + viewport.x;
+          const top = (element.y + 8) * viewport.scale + viewport.y;
+          const fontSize = element.fontSize * viewport.scale;
+          const stickyW = (element.width - 16) * viewport.scale;
+
+          if (isEditing) {
+            return (
+              <View
+                key={element.id}
+                style={{
+                  position: "absolute",
+                  left,
+                  top,
+                  width: stickyW,
+                }}
+              >
+                <TextInput
+                  style={{
+                    color: element.textColor,
+                    fontSize,
+                    padding: 0,
+                    margin: 0,
+                    minHeight: fontSize + 8,
+                  }}
+                  value={editingText.text}
+                  onChangeText={onEditingTextChange}
+                  onSubmitEditing={onEditingTextSubmit}
+                  onBlur={onEditingTextBlur}
+                  autoFocus
+                  multiline
+                  blurOnSubmit={false}
+                  placeholder="Type here…"
+                  placeholderTextColor="rgba(0,0,0,0.3)"
+                />
+              </View>
+            );
+          }
+
           return (
             <RNText
               key={element.id}
+              pointerEvents="none"
               style={{
                 position: "absolute",
-                left: element.x + 8,
-                top: element.y + 8,
+                left,
+                top,
                 color: element.textColor,
-                fontSize: element.fontSize,
+                fontSize,
               }}
             >
               {element.text}
@@ -520,10 +767,10 @@ export function WhiteboardNativeCanvas({
             source={{ uri: element.src }}
             style={{
               position: "absolute",
-              left: element.x,
-              top: element.y,
-              width: element.width,
-              height: element.height,
+              left: element.x * viewport.scale + viewport.x,
+              top: element.y * viewport.scale + viewport.y,
+              width: element.width * viewport.scale,
+              height: element.height * viewport.scale,
               resizeMode: "contain",
             }}
           />
@@ -536,10 +783,10 @@ export function WhiteboardNativeCanvas({
           style={[
             styles.selectionBox,
             {
-              left: selectionBounds.x,
-              top: selectionBounds.y,
-              width: Math.max(1, selectionBounds.width),
-              height: Math.max(1, selectionBounds.height),
+              left: selectionBounds.x * viewport.scale + viewport.x,
+              top: selectionBounds.y * viewport.scale + viewport.y,
+              width: Math.max(1, selectionBounds.width * viewport.scale),
+              height: Math.max(1, selectionBounds.height * viewport.scale),
             },
           ]}
         >
@@ -554,7 +801,15 @@ export function WhiteboardNativeCanvas({
         <View
           key={cursor.clientId}
           pointerEvents="none"
-          style={[styles.cursor, { transform: [{ translateX: cursor.x }, { translateY: cursor.y }] }]}
+          style={[
+            styles.cursor,
+            {
+              transform: [
+                { translateX: cursor.x * viewport.scale + viewport.x },
+                { translateY: cursor.y * viewport.scale + viewport.y },
+              ],
+            },
+          ]}
         >
           <View style={[styles.cursorDot, { backgroundColor: cursor.color }]} />
           <View style={styles.cursorLabel}>
@@ -571,7 +826,9 @@ export function WhiteboardNativeCanvas({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0f0f0f",
+    backgroundColor: "#111111",
+    borderRadius: 2,
+    overflow: "hidden",
   },
   selectionBox: {
     position: "absolute",

@@ -2,8 +2,6 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import type { ToolKind, ToolSettings } from "../../core/tools/engine";
 import { TOOL_COLORS } from "../../shared/constants/tools";
 
-/* ── SVG Icon Components (Excalidraw-style stroke icons) ── */
-
 const Icon = ({ children, size = 20 }: { children: React.ReactNode; size?: number }) => (
   <svg
     width={size}
@@ -154,13 +152,9 @@ function Island({
   );
 }
 
-/* ── Divider ── */
-
 function ToolDivider() {
   return <div className="w-px h-6 mx-0.5 bg-white/10" />;
 }
-
-/* ── Tool Button ── */
 
 function ToolButton({
   toolId,
@@ -203,8 +197,6 @@ function ToolButton({
     </button>
   );
 }
-
-/* ── Color Picker Popover ── */
 
 function ColorPicker({
   settings,
@@ -256,7 +248,6 @@ function ColorPicker({
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 z-50">
           <Island padding={2}>
             <div className="flex flex-col gap-3">
-              {/* Color grid */}
               <div>
                 <div className="text-[10px] font-semibold uppercase tracking-widest text-[#b8b8b8] mb-2 px-0.5">
                   Stroke color
@@ -283,7 +274,6 @@ function ColorPicker({
                 </div>
               </div>
 
-              {/* Stroke width */}
               <div>
                 <div className="text-[10px] font-semibold uppercase tracking-widest text-[#b8b8b8] mb-2 px-0.5">
                   Stroke width
@@ -322,8 +312,6 @@ function ColorPicker({
   );
 }
 
-/* ── Main Toolbar ── */
-
 export function WhiteboardToolbar({
   tool,
   onToolChange,
@@ -339,7 +327,6 @@ export function WhiteboardToolbar({
   locked: boolean;
   onExport: () => void;
 }) {
-  // Split tools into groups for visual separation
   const pointerTools: ToolKind[] = ["select"];
   const drawTools: ToolKind[] = ["pen", "highlighter", "eraser"];
   const shapeTools: ToolKind[] = ["rect", "ellipse", "line"];
@@ -348,7 +335,6 @@ export function WhiteboardToolbar({
   return (
     <Island padding={1}>
       <div className="flex items-center gap-0.5">
-        {/* Pointer tool */}
         {pointerTools.map((id) => (
           <ToolButton
             key={id}
@@ -361,7 +347,6 @@ export function WhiteboardToolbar({
 
         <ToolDivider />
 
-        {/* Draw tools */}
         {drawTools.map((id) => (
           <ToolButton
             key={id}
@@ -374,7 +359,6 @@ export function WhiteboardToolbar({
 
         <ToolDivider />
 
-        {/* Shape tools */}
         {shapeTools.map((id) => (
           <ToolButton
             key={id}
@@ -387,7 +371,6 @@ export function WhiteboardToolbar({
 
         <ToolDivider />
 
-        {/* Insert tools */}
         {insertTools.map((id) => (
           <ToolButton
             key={id}
@@ -400,7 +383,6 @@ export function WhiteboardToolbar({
 
         <ToolDivider />
 
-        {/* Color/style picker */}
         <ColorPicker
           settings={settings}
           onSettingsChange={onSettingsChange}
@@ -409,7 +391,6 @@ export function WhiteboardToolbar({
 
         <ToolDivider />
 
-        {/* Export */}
         <button
           type="button"
           onClick={onExport}

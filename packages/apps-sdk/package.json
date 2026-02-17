@@ -20,6 +20,8 @@
     "react": "*",
     "socket.io-client": "*",
     "react-native": "*",
-    "@shopify/react-native-skia": "*"
+    "@shopify/react-native-skia": "*",
+    "lucide-react-native": "*",
+    "react-native-svg": "*"
   }
 }

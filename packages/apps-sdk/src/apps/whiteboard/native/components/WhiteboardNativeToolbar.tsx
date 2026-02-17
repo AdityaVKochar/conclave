@@ -1,20 +1,42 @@
-import React from "react";
-import { StyleSheet, View, Pressable, Text } from "react-native";
+import React, { useState, useCallback, type ComponentType } from "react";
+import {
+  StyleSheet,
+  View,
+  Pressable,
+  ScrollView,
+  useWindowDimensions,
+} from "react-native";
+import {
+  MousePointer2,
+  Pencil,
+  Highlighter,
+  Eraser,
+  Square,
+  Circle,
+  Minus,
+  Baseline,
+  StickyNote,
+  Download,
+  Palette,
+  X,
+} from "lucide-react-native";
 import type { ToolKind, ToolSettings } from "../../core/tools/engine";
 import { TOOL_COLORS } from "../../shared/constants/tools";
 
-const TOOLS: { id: ToolKind; label: string }[] = [
-  { id: "select", label: "Select" },
-  { id: "pen", label: "Draw" },
-  { id: "highlighter", label: "Highlight" },
-  { id: "eraser", label: "Erase" },
-  { id: "rect", label: "Rectangle" },
-  { id: "ellipse", label: "Ellipse" },
-  { id: "line", label: "Line" },
-  { id: "text", label: "Text" },
-  { id: "sticky", label: "Sticky" },
+type LucideIcon = ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
+
+const TOOLS: { id: ToolKind; icon: LucideIcon }[] = [
+  { id: "select", icon: MousePointer2 },
+  { id: "pen", icon: Pencil },
+  { id: "highlighter", icon: Highlighter },
+  { id: "eraser", icon: Eraser },
+  { id: "rect", icon: Square },
+  { id: "ellipse", icon: Circle },
+  { id: "line", icon: Minus },
+  { id: "text", icon: Baseline },
+  { id: "sticky", icon: StickyNote },
 ];
-const STROKE_WIDTHS = [2, 3, 5, 8, 12];
+const STROKE_WIDTHS = [2, 4, 6, 10];
 
 export function WhiteboardNativeToolbar({
   tool,
@@ -31,58 +53,125 @@ export function WhiteboardNativeToolbar({
   locked: boolean;
   onExport: () => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const { width: screenWidth } = useWindowDimensions();
+
+  const toggleExpand = useCallback(() => setExpanded((prev) => !prev), []);
+
+  const iconSize = 18;
+  const btnSize = 36;
+
   return (
-    <View style={styles.container}>
-      <View style={styles.row}>
-        {TOOLS.map((item) => (
-          <Pressable
-            key={item.id}
-            onPress={() => onToolChange(item.id)}
-            disabled={locked && item.id !== "select"}
-            style={[
-              styles.button,
-              tool === item.id && styles.buttonActive,
-              locked && item.id !== "select" && styles.buttonDisabled,
-            ]}
-          >
-            <Text style={styles.buttonText}>{item.label}</Text>
-          </Pressable>
-        ))}
-      </View>
-      <View style={styles.row}>
-        <View style={styles.colors}>
-          {TOOL_COLORS.map((color) => (
-            <Pressable
-              key={color}
-              disabled={locked}
-              onPress={() => onSettingsChange({ ...settings, strokeColor: color, textColor: color })}
-              style={[
-                styles.colorDot,
-                { backgroundColor: color },
-                settings.strokeColor === color && styles.colorDotActive,
-                locked && styles.buttonDisabled,
-              ]}
-            />
-          ))}
+    <View style={styles.wrapper} pointerEvents="box-none">
+      {/* Expandable options panel — colors + stroke widths */}
+      {expanded && (
+        <View style={[styles.optionsPanel, { maxWidth: screenWidth - 32 }]}>
+          <View style={styles.optionsRow}>
+            {TOOL_COLORS.map((color) => (
+              <Pressable
+                key={color}
+                disabled={locked}
+                onPress={() =>
+                  onSettingsChange({
+                    ...settings,
+                    strokeColor: color,
+                    textColor: color,
+                  })
+                }
+                style={[
+                  styles.colorDot,
+                  { backgroundColor: color },
+                  settings.strokeColor === color && styles.colorDotActive,
+                  locked && styles.disabled,
+                ]}
+              />
+            ))}
+          </View>
+          <View style={styles.optionsRow}>
+            {STROKE_WIDTHS.map((size) => (
+              <Pressable
+                key={size}
+                disabled={locked}
+                onPress={() =>
+                  onSettingsChange({ ...settings, strokeWidth: size })
+                }
+                style={[
+                  styles.sizeBtn,
+                  settings.strokeWidth === size && styles.sizeBtnActive,
+                  locked && styles.disabled,
+                ]}
+              >
+                <View
+                  style={[
+                    styles.sizeDot,
+                    {
+                      width: Math.min(size + 2, 14),
+                      height: Math.min(size + 2, 14),
+                      borderRadius: Math.min(size + 2, 14) / 2,
+                    },
+                  ]}
+                />
+              </Pressable>
+            ))}
+          </View>
         </View>
-        <View style={styles.sizes}>
-          {STROKE_WIDTHS.map((size) => (
-            <Pressable
-              key={size}
-              disabled={locked}
-              onPress={() => onSettingsChange({ ...settings, strokeWidth: size })}
-              style={[
-                styles.sizeButton,
-                settings.strokeWidth === size && styles.sizeButtonActive,
-                locked && styles.buttonDisabled,
-              ]}
-            >
-              <View style={[styles.sizeDot, { width: size + 1, height: size + 1 }]} />
-            </Pressable>
-          ))}
-        </View>
-        <Pressable onPress={onExport} style={styles.exportButton}>
-          <Text style={styles.exportText}>Export</Text>
+      )}
+
+      <View style={[styles.bar, { maxWidth: screenWidth - 24 }]}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          bounces={false}
+        >
+          {TOOLS.map((item) => {
+            const Icon = item.icon;
+            const isActive = tool === item.id;
+            const isDisabled = locked && item.id !== "select";
+            return (
+              <Pressable
+                key={item.id}
+                onPress={() => onToolChange(item.id)}
+                disabled={isDisabled}
+                style={[
+                  styles.toolBtn,
+                  { width: btnSize, height: btnSize },
+                  isActive && styles.toolBtnActive,
+                  isDisabled && styles.disabled,
+                ]}
+              >
+                <Icon
+                  size={iconSize}
+                  color={isActive ? "#fff" : "rgba(254,252,217,0.7)"}
+                  strokeWidth={isActive ? 2.2 : 1.6}
+                />
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
+        <View style={styles.separator} />
+
+        <Pressable
+          onPress={toggleExpand}
+          style={[
+            styles.toolBtn,
+            { width: btnSize, height: btnSize },
+            expanded && styles.toolBtnActive,
+          ]}
+        >
+          {expanded ? (
+            <X size={iconSize} color="#fff" strokeWidth={2} />
+          ) : (
+            <Palette size={iconSize} color="rgba(254,252,217,0.7)" strokeWidth={1.6} />
+          )}
+        </Pressable>
+
+        <Pressable
+          onPress={onExport}
+          style={[styles.toolBtn, { width: btnSize, height: btnSize }]}
+        >
+          <Download size={iconSize} color="rgba(254,252,217,0.7)" strokeWidth={1.6} />
         </Pressable>
       </View>
     </View>
@@ -90,93 +179,104 @@ export function WhiteboardNativeToolbar({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 8,
-    gap: 6,
-    backgroundColor: "rgba(10,10,10,0.86)",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(254,252,217,0.15)",
+  wrapper: {
+    position: "absolute",
+    bottom: 16,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    zIndex: 50,
   },
-  row: {
+  bar: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
+    alignItems: "center",
+    paddingLeft: 4,
+    paddingRight: 4,
+    paddingVertical: 4,
+    backgroundColor: "rgba(10,10,10,0.94)",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(254,252,217,0.1)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 12,
   },
-  button: {
-    paddingVertical: 6,
-    paddingHorizontal: 9,
-    borderRadius: 10,
-    backgroundColor: "rgba(255,255,255,0.08)",
+  scrollContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 1,
+    paddingRight: 2,
   },
-  buttonActive: {
+  toolBtn: {
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 12,
+  },
+  toolBtnActive: {
     backgroundColor: "#F95F4A",
   },
-  buttonDisabled: {
-    opacity: 0.4,
+  disabled: {
+    opacity: 0.3,
   },
-  buttonText: {
-    color: "#FEFCD9",
-    fontSize: 10,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
+  separator: {
+    width: 1,
+    height: 20,
+    backgroundColor: "rgba(254,252,217,0.12)",
+    marginHorizontal: 3,
+    flexShrink: 0,
   },
-  colors: {
+  optionsPanel: {
+    marginBottom: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: "rgba(10,10,10,0.94)",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(254,252,217,0.1)",
+    gap: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  optionsRow: {
     flexDirection: "row",
-    gap: 6,
+    justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.06)",
+    gap: 8,
   },
   colorDot: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 1,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 2,
     borderColor: "transparent",
   },
   colorDotActive: {
-    borderColor: "rgba(255,255,255,0.9)",
+    borderColor: "#fff",
+    shadowColor: "#fff",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
   },
-  sizes: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.06)",
-  },
-  sizeButton: {
-    width: 22,
-    height: 22,
-    borderRadius: 999,
+  sizeBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "transparent",
+    backgroundColor: "rgba(255,255,255,0.06)",
   },
-  sizeButtonActive: {
-    borderColor: "rgba(249,95,74,0.9)",
-    backgroundColor: "rgba(249,95,74,0.2)",
+  sizeBtnActive: {
+    borderColor: "#F95F4A",
+    backgroundColor: "rgba(249,95,74,0.18)",
   },
   sizeDot: {
-    borderRadius: 999,
-    backgroundColor: "rgba(254,252,217,0.9)",
-  },
-  exportButton: {
-    marginLeft: "auto",
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-    borderRadius: 10,
-    backgroundColor: "rgba(255,255,255,0.15)",
-  },
-  exportText: {
-    color: "#FEFCD9",
-    fontSize: 10,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
+    backgroundColor: "rgba(254,252,217,0.85)",
   },
 });
