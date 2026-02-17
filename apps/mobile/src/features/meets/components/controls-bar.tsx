@@ -346,7 +346,7 @@ export function ControlsBar({
               onPress={onToggleChat}
             />
 
-            {onToggleWhiteboard ? (
+            {isAdmin && onToggleWhiteboard ? (
               <ControlButton
                 icon={StickyNote}
                 isActive={isWhiteboardActive}

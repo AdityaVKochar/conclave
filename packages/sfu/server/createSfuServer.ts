@@ -1,18 +1,16 @@
-import { createServer as createHttpServer } from "http";
-import type { Server as HttpServer } from "http";
-import type { Express } from "express";
 import type { Server as SocketIOServer } from "socket.io";
 import { config as defaultConfig } from "../config/config.js";
 import { Logger } from "../utilities/loggers.js";
 import { initMediaSoup } from "./init.js";
 import { createSfuApp } from "./http/createApp.js";
+import type { SfuHttpApp } from "./http/createApp.js";
 import { createSfuSocketServer } from "./socket/createSocketServer.js";
 import { createSfuState } from "./state.js";
 import type { SfuState } from "./state.js";
 
 export type SfuServer = {
-  app: Express;
-  httpServer: HttpServer;
+  app: SfuHttpApp;
+  httpServer: Bun.Server<any> | null;
   io: SocketIOServer;
   state: SfuState;
   start: () => Promise<void>;
@@ -30,32 +28,43 @@ export const createSfuServer = (
   const state = createSfuState({ isDraining: config.draining });
 
   const app = createSfuApp({ state, config });
-  const httpServer = createHttpServer(app);
-  const io = createSfuSocketServer(httpServer, { state, config });
+  const socketServer = createSfuSocketServer({ state, config });
+  const io = socketServer.io;
+  let httpServer: Bun.Server<any> | null = null;
 
   const start = async (): Promise<void> => {
+    if (httpServer) {
+      return;
+    }
+
     await initMediaSoup(state);
 
-    await new Promise<void>((resolve) => {
-      httpServer.listen(config.port, () => {
-        Logger.success(`Server running on port ${config.port}`);
-        resolve();
-      });
+    httpServer = Bun.serve({
+      port: config.port,
+      websocket: socketServer.handler.websocket,
+      idleTimeout: socketServer.handler.idleTimeout,
+      maxRequestBodySize: socketServer.handler.maxRequestBodySize,
+      fetch: (request, server) => {
+        const pathname = new URL(request.url).pathname;
+        if (socketServer.isSocketPath(pathname)) {
+          return socketServer.engine.handleRequest(request, server);
+        }
+
+        return app.fetch(request);
+      },
     });
+
+    Logger.success(`Server running on port ${config.port}`);
   };
 
   const stop = async (): Promise<void> => {
+    socketServer.engine.close();
     io.close();
 
-    await new Promise<void>((resolve, reject) => {
-      httpServer.close((error) => {
-        if (error) {
-          reject(error);
-          return;
-        }
-        resolve();
-      });
-    });
+    if (httpServer) {
+      httpServer.stop(true);
+      httpServer = null;
+    }
 
     for (const room of state.rooms.values()) {
       room.close();
@@ -74,7 +83,9 @@ export const createSfuServer = (
 
   return {
     app,
-    httpServer,
+    get httpServer() {
+      return httpServer;
+    },
     io,
     state,
     start,

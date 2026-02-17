@@ -1,4 +1,4 @@
-import type { Server as HttpServer } from "http";
+import { Server as BunEngine } from "@socket.io/bun-engine";
 import { Server as SocketIOServer } from "socket.io";
 import { config as defaultConfig } from "../../config/config.js";
 import type { SfuState } from "../state.js";
@@ -10,10 +10,18 @@ export type CreateSocketServerOptions = {
   config?: typeof defaultConfig;
 };
 
+export type SfuSocketServer = {
+  io: SocketIOServer;
+  engine: BunEngine;
+  isSocketPath: (pathname: string) => boolean;
+  handler: ReturnType<BunEngine["handler"]>;
+};
+
+const SOCKET_IO_PATH = "/socket.io/";
+
 export const createSfuSocketServer = (
-  httpServer: HttpServer,
   options: CreateSocketServerOptions,
-): SocketIOServer => {
+): SfuSocketServer => {
   const socketConfig = options.config ?? defaultConfig;
   const connectionStateRecovery =
     socketConfig.socket.recoveryMaxDisconnectionMs > 0
@@ -24,18 +32,34 @@ export const createSfuSocketServer = (
         }
       : undefined;
 
-  const io = new SocketIOServer(httpServer, {
+  const io = new SocketIOServer({
+    connectionStateRecovery,
+  });
+
+  const engine = new BunEngine({
+    path: SOCKET_IO_PATH,
+    pingInterval: socketConfig.socket.pingIntervalMs,
+    pingTimeout: socketConfig.socket.pingTimeoutMs,
     cors: {
       origin: "*",
       methods: ["GET", "POST"],
     },
-    pingInterval: socketConfig.socket.pingIntervalMs,
-    pingTimeout: socketConfig.socket.pingTimeoutMs,
-    connectionStateRecovery,
   });
+
+  io.bind(engine);
 
   attachSocketAuth(io, { config: options.config });
   registerConnectionHandlers(io, options.state);
 
-  return io;
+  const handler = engine.handler();
+  const isSocketPath = (pathname: string): boolean => {
+    return pathname === SOCKET_IO_PATH || pathname === SOCKET_IO_PATH.slice(0, -1);
+  };
+
+  return {
+    io,
+    engine,
+    isSocketPath,
+    handler,
+  };
 };

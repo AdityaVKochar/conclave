@@ -185,11 +185,20 @@ function MobileMeetsMainContent({
 }: MobileMeetsMainContentProps) {
   const { state: appsState, openApp, closeApp, setLocked, refreshState } = useApps();
   const isWhiteboardActive = appsState.activeAppId === "whiteboard";
-  const handleOpenWhiteboard = useCallback(() => openApp("whiteboard"), [openApp]);
-  const handleCloseWhiteboard = useCallback(() => closeApp(), [closeApp]);
+  const handleOpenWhiteboard = useCallback(() => {
+    if (!isAdmin) return;
+    openApp("whiteboard");
+  }, [isAdmin, openApp]);
+  const handleCloseWhiteboard = useCallback(() => {
+    if (!isAdmin) return;
+    closeApp();
+  }, [isAdmin, closeApp]);
   const handleToggleAppsLock = useCallback(
-    () => setLocked(!appsState.locked),
-    [appsState.locked, setLocked]
+    () => {
+      if (!isAdmin) return;
+      setLocked(!appsState.locked);
+    },
+    [appsState.locked, isAdmin, setLocked]
   );
   useEffect(() => {
     if (connectionState === "joined") {
@@ -459,8 +468,8 @@ function MobileMeetsMainContent({
         isBrowserAudioMuted={isBrowserAudioMuted}
         onToggleBrowserAudio={onToggleBrowserAudio}
         isWhiteboardActive={isWhiteboardActive}
-        onOpenWhiteboard={handleOpenWhiteboard}
-        onCloseWhiteboard={handleCloseWhiteboard}
+        onOpenWhiteboard={isAdmin ? handleOpenWhiteboard : undefined}
+        onCloseWhiteboard={isAdmin ? handleCloseWhiteboard : undefined}
         isAppsLocked={appsState.locked}
         onToggleAppsLock={isAdmin ? handleToggleAppsLock : undefined}
       />

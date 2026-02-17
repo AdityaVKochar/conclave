@@ -25,6 +25,11 @@ if [[ ! -f "$COMPOSE_FILE" ]]; then
   exit 1
 fi
 
+if ! command -v bun >/dev/null 2>&1; then
+  echo "bun is required to deploy the SFU." >&2
+  exit 1
+fi
+
 set -a
 # shellcheck disable=SC1090
 source "$ENV_FILE"
@@ -77,7 +82,7 @@ get_pool_url() {
 
 json_field() {
   local field="$1"
-  node -e "const fs=require('fs');const data=JSON.parse(fs.readFileSync(0,'utf8'));const val=data['$field'];if(typeof val==='boolean'){console.log(val?'true':'false');}else if(val===undefined||val===null){console.log('');}else{console.log(val);}"
+  bun -e "const data=JSON.parse((await Bun.stdin.text())||'{}');const val=data['$field'];if(typeof val==='boolean'){console.log(val?'true':'false');}else if(val===undefined||val===null){console.log('');}else{console.log(val);}"
 }
 
 status_json() {
@@ -95,7 +100,7 @@ echo "Pulling latest code..."
 git -C "$ROOT_DIR" pull
 
 echo "Installing SFU dependencies..."
-npm -C "${ROOT_DIR}/packages/sfu" install
+bun install --cwd "${ROOT_DIR}/packages/sfu"
 
 if [[ "$DEPLOY_BROWSER" == "true" ]]; then
   echo "Installing Browser Service dependencies..."

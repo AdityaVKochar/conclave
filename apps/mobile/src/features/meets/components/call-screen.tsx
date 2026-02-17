@@ -120,15 +120,31 @@ export function CallScreen({
 }: CallScreenProps) {
   const { state: appsState, openApp, closeApp, setLocked, refreshState } = useApps();
   const isWhiteboardActive = appsState.activeAppId === "whiteboard";
-  const handleOpenWhiteboard = useCallback(() => openApp("whiteboard"), [openApp]);
-  const handleCloseWhiteboard = useCallback(() => closeApp(), [closeApp]);
+  const handleOpenWhiteboard = useCallback(() => {
+    if (!isAdmin) return;
+    openApp("whiteboard");
+  }, [isAdmin, openApp]);
+  const handleCloseWhiteboard = useCallback(() => {
+    if (!isAdmin) return;
+    closeApp();
+  }, [isAdmin, closeApp]);
   const handleToggleAppsLock = useCallback(
-    () => setLocked(!appsState.locked),
-    [appsState.locked, setLocked]
+    () => {
+      if (!isAdmin) return;
+      setLocked(!appsState.locked);
+    },
+    [appsState.locked, isAdmin, setLocked]
   );
   const handleToggleWhiteboard = useCallback(
-    () => (isWhiteboardActive ? handleCloseWhiteboard() : handleOpenWhiteboard()),
-    [isWhiteboardActive, handleCloseWhiteboard, handleOpenWhiteboard]
+    () => {
+      if (!isAdmin) return;
+      if (isWhiteboardActive) {
+        handleCloseWhiteboard();
+      } else {
+        handleOpenWhiteboard();
+      }
+    },
+    [isAdmin, isWhiteboardActive, handleCloseWhiteboard, handleOpenWhiteboard]
   );
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
@@ -531,8 +547,8 @@ export function CallScreen({
         onToggleRoomLock={onToggleRoomLock}
         isWhiteboardActive={isWhiteboardActive}
         isAppsLocked={appsState.locked}
-        onToggleWhiteboard={handleToggleWhiteboard}
-        onToggleAppsLock={handleToggleAppsLock}
+        onToggleWhiteboard={isAdmin ? handleToggleWhiteboard : undefined}
+        onToggleAppsLock={isAdmin ? handleToggleAppsLock : undefined}
         onSendReaction={onSendReaction}
         onLeave={onLeave}
       />

@@ -198,6 +198,9 @@ function ControlsBar({
   const mutedButtonClass = `${baseButtonClass} !text-[#F95F4A] !bg-[#F95F4A]/15`;
   const ghostDisabledClass = `${baseButtonClass} !opacity-30 cursor-not-allowed`;
   const screenShareDisabled = isGhostMode || !canStartScreenShare;
+  const canManageWhiteboard = Boolean(
+    isAdmin && (onOpenWhiteboard || onCloseWhiteboard)
+  );
 
   useEffect(() => {
     if (!isReactionMenuOpen) return;
@@ -243,6 +246,12 @@ function ControlsBar({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isAppsMenuOpen]);
+
+  useEffect(() => {
+    if (!canManageWhiteboard && isAppsMenuOpen) {
+      setIsAppsMenuOpen(false);
+    }
+  }, [canManageWhiteboard, isAppsMenuOpen]);
 
   const handleReactionClick = useCallback(
     (reaction: ReactionOption) => {
@@ -600,47 +609,49 @@ function ControlsBar({
         )}
       </div>
 
-      <div ref={appsMenuRef} className="relative">
-        <button
-          onClick={() => setIsAppsMenuOpen((prev) => !prev)}
-          className={defaultButtonClass}
-          title="Apps"
-          aria-label="Apps"
-        >
-          <LayoutGrid className="w-4 h-4" />
-        </button>
+      {canManageWhiteboard && (
+        <div ref={appsMenuRef} className="relative">
+          <button
+            onClick={() => setIsAppsMenuOpen((prev) => !prev)}
+            className={defaultButtonClass}
+            title="Apps"
+            aria-label="Apps"
+          >
+            <LayoutGrid className="w-4 h-4" />
+          </button>
 
-        {isAppsMenuOpen && (
-          <div className="absolute bottom-14 left-1/2 -translate-x-1/2 w-56 rounded-xl border border-white/10 bg-[#0f0f0f] p-3 shadow-xl">
-            <button
-              type="button"
-              onClick={() => {
-                if (isWhiteboardActive) {
-                  onCloseWhiteboard?.();
-                } else {
-                  onOpenWhiteboard?.();
-                }
-                setIsAppsMenuOpen(false);
-              }}
-              className="w-full text-left px-3 py-2 rounded-lg text-sm text-[#FEFCD9]/80 hover:bg-white/10"
-            >
-              {isWhiteboardActive ? "Close whiteboard" : "Open whiteboard"}
-            </button>
-            {onToggleAppsLock && (
+          {isAppsMenuOpen && (
+            <div className="absolute bottom-14 left-1/2 -translate-x-1/2 w-56 rounded-xl border border-white/10 bg-[#0f0f0f] p-3 shadow-xl">
               <button
                 type="button"
                 onClick={() => {
-                  onToggleAppsLock();
+                  if (isWhiteboardActive) {
+                    onCloseWhiteboard?.();
+                  } else {
+                    onOpenWhiteboard?.();
+                  }
                   setIsAppsMenuOpen(false);
                 }}
-                className="mt-2 w-full text-left px-3 py-2 rounded-lg text-sm text-[#FEFCD9]/60 hover:bg-white/10"
+                className="w-full text-left px-3 py-2 rounded-lg text-sm text-[#FEFCD9]/80 hover:bg-white/10"
               >
-                {isAppsLocked ? "Unlock editing" : "Lock editing"}
+                {isWhiteboardActive ? "Close whiteboard" : "Open whiteboard"}
               </button>
-            )}
-          </div>
-        )}
-      </div>
+              {onToggleAppsLock && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onToggleAppsLock();
+                    setIsAppsMenuOpen(false);
+                  }}
+                  className="mt-2 w-full text-left px-3 py-2 rounded-lg text-sm text-[#FEFCD9]/60 hover:bg-white/10"
+                >
+                  {isAppsLocked ? "Unlock editing" : "Lock editing"}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <button
         onClick={onToggleChat}
