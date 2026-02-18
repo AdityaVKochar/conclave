@@ -47,7 +47,6 @@ export function WhiteboardNativeApp() {
     [],
   );
 
-  /** Save text to Yjs doc (without dismissing the input) */
   const saveEditingText = useCallback(() => {
     if (!editingText || !activePage) return;
     const elements = getPageElements(doc, activePage.id);
@@ -58,16 +57,14 @@ export function WhiteboardNativeApp() {
     }
   }, [editingText, doc, activePage]);
 
-  /** Save and dismiss */
   const handleTextSubmit = useCallback(() => {
     saveEditingText();
     setEditingText(null);
   }, [saveEditingText]);
 
-  /** Save on blur but keep input visible */
   const handleTextBlur = useCallback(() => {
-    saveEditingText();
-  }, [saveEditingText]);
+    handleTextSubmit();
+  }, [handleTextSubmit]);
 
   const handleTextCancel = useCallback(() => {
     setEditingText(null);
