@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useHotkey } from "@tanstack/react-hotkeys";
 import type { Socket } from "socket.io-client";
 import type { RoomInfo } from "@/lib/sfu-types";
 import { signOut } from "@/lib/auth-client";
@@ -146,6 +147,10 @@ export default function MeetsClient({
   const handleToggleMuteCommand = useCallback(() => {
     toggleMuteCommandRef.current?.();
   }, []);
+
+  useHotkey("Mod+D", handleToggleMuteCommand, {
+    enabled: connectionState === "joined",
+  });
 
   const handleToggleCameraCommand = useCallback(() => {
     toggleCameraCommandRef.current?.();
@@ -348,6 +353,26 @@ export default function MeetsClient({
   useEffect(() => {
     setHandRaisedCommandRef.current = setHandRaisedState;
   }, [setHandRaisedState]);
+
+  // ============================================
+  // Keyboard Shortcuts
+  // ============================================
+
+  useHotkey("Mod+E", handleToggleCameraCommand, {
+    enabled: connectionState === "joined",
+  });
+
+  useHotkey("Mod+Alt+H", toggleHandRaised, {
+    enabled: connectionState === "joined",
+  });
+
+  useHotkey("Mod+Alt+C", toggleChat, {
+    enabled: connectionState === "joined",
+  });
+
+  useHotkey("Mod+Alt+P", () => setIsParticipantsOpen((prev) => !prev), {
+    enabled: connectionState === "joined",
+  });
 
   const socket = useMeetSocket({
     refs,

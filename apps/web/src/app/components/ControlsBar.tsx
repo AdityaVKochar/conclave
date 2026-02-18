@@ -30,6 +30,7 @@ import {
 import { memo, useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import type { ReactionOption } from "../lib/types";
 import { normalizeBrowserUrl } from "../lib/utils";
+import HotkeyTooltip from "./HotkeyTooltip";
 
 interface ControlsBarProps {
   isMuted: boolean;
@@ -260,19 +261,20 @@ function ControlsBar({
     <div className="flex justify-center items-center gap-1 shrink-0 py-2 px-3 bg-black/40 backdrop-blur-sm rounded-full mx-auto"
       style={{ fontFamily: "'PolySans Mono', monospace" }}
     >
-      <button
-        onClick={onToggleParticipants}
-        className={`relative ${isParticipantsOpen ? activeButtonClass : defaultButtonClass}`}
-        title="Participants"
-        aria-label="Participants"
-      >
-        <Users className="w-4 h-4" />
-        {pendingUsersCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 text-[10px] font-bold bg-[#F95F4A] text-white rounded-full flex items-center justify-center">
-            {pendingUsersCount > 9 ? "9+" : pendingUsersCount}
-          </span>
-        )}
-      </button>
+      <HotkeyTooltip label="Participants" hotkey="Mod+Alt+P">
+        <button
+          onClick={onToggleParticipants}
+          className={`relative ${isParticipantsOpen ? activeButtonClass : defaultButtonClass}`}
+          aria-label="Participants"
+        >
+          <Users className="w-4 h-4" />
+          {pendingUsersCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 text-[10px] font-bold bg-[#F95F4A] text-white rounded-full flex items-center justify-center">
+              {pendingUsersCount > 9 ? "9+" : pendingUsersCount}
+            </span>
+          )}
+        </button>
+      </HotkeyTooltip>
 
       {isAdmin && (
         <button
@@ -292,53 +294,52 @@ function ControlsBar({
         </button>
       )}
 
-      <button
-        onClick={onToggleMute}
-        disabled={isGhostMode}
-        className={
-          isGhostMode
-            ? ghostDisabledClass
-            : isMuted
-              ? mutedButtonClass
-              : defaultButtonClass
-        }
-        title={isGhostMode ? "Ghost mode: mic locked" : isMuted ? "Unmute" : "Mute"}
-        aria-label={isGhostMode ? "Ghost mode: mic locked" : isMuted ? "Unmute" : "Mute"}
-      >
-        {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-      </button>
+      <HotkeyTooltip label={isMuted ? "Unmute" : "Mute"} hotkey="Mod+D">
+        <button
+          onClick={onToggleMute}
+          disabled={isGhostMode}
+          className={
+            isGhostMode
+              ? ghostDisabledClass
+              : isMuted
+                ? mutedButtonClass
+                : defaultButtonClass
+          }
+          aria-label={isGhostMode ? "Ghost mode: mic locked" : isMuted ? "Unmute" : "Mute"}
+        >
+          {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+        </button>
+      </HotkeyTooltip>
 
-      <button
-        onClick={onToggleCamera}
-        disabled={isGhostMode}
-        className={
-          isGhostMode
-            ? ghostDisabledClass
-            : isCameraOff
-              ? mutedButtonClass
-              : defaultButtonClass
-        }
-        title={
-          isGhostMode
-            ? "Ghost mode: camera locked"
-            : isCameraOff
-              ? "Turn on camera"
-              : "Turn off camera"
-        }
-        aria-label={
-          isGhostMode
-            ? "Ghost mode: camera locked"
-            : isCameraOff
-              ? "Turn on camera"
-              : "Turn off camera"
-        }
+      <HotkeyTooltip
+        label={isCameraOff ? "Turn on camera" : "Turn off camera"}
+        hotkey="Mod+E"
       >
-        {isCameraOff ? (
-          <VideoOff className="w-4 h-4" />
-        ) : (
-          <Video className="w-4 h-4" />
-        )}
-      </button>
+        <button
+          onClick={onToggleCamera}
+          disabled={isGhostMode}
+          className={
+            isGhostMode
+              ? ghostDisabledClass
+              : isCameraOff
+                ? mutedButtonClass
+                : defaultButtonClass
+          }
+          aria-label={
+            isGhostMode
+              ? "Ghost mode: camera locked"
+              : isCameraOff
+                ? "Turn on camera"
+                : "Turn off camera"
+          }
+        >
+          {isCameraOff ? (
+            <VideoOff className="w-4 h-4" />
+          ) : (
+            <Video className="w-4 h-4" />
+          )}
+        </button>
+      </HotkeyTooltip>
 
       <button
         onClick={onToggleScreenShare}
@@ -529,33 +530,31 @@ function ControlsBar({
         </button>
       )}
 
-      <button
-        onClick={onToggleHandRaised}
-        disabled={isGhostMode}
-        className={
-          isGhostMode
-            ? ghostDisabledClass
-            : isHandRaised
-              ? `${baseButtonClass} !bg-amber-400 !text-black`
-              : defaultButtonClass
-        }
-        title={
-          isGhostMode
-            ? "Ghost mode: hand raise locked"
-            : isHandRaised
-              ? "Lower hand"
-              : "Raise hand"
-        }
-        aria-label={
-          isGhostMode
-            ? "Ghost mode: hand raise locked"
-            : isHandRaised
-              ? "Lower hand"
-              : "Raise hand"
-        }
+      <HotkeyTooltip
+        label={isHandRaised ? "Lower hand" : "Raise hand"}
+        hotkey="Mod+Alt+H"
       >
-        <Hand className="w-4 h-4" />
-      </button>
+        <button
+          onClick={onToggleHandRaised}
+          disabled={isGhostMode}
+          className={
+            isGhostMode
+              ? ghostDisabledClass
+              : isHandRaised
+                ? `${baseButtonClass} !bg-amber-400 !text-black`
+                : defaultButtonClass
+          }
+          aria-label={
+            isGhostMode
+              ? "Ghost mode: hand raise locked"
+              : isHandRaised
+                ? "Lower hand"
+                : "Raise hand"
+          }
+        >
+          <Hand className="w-4 h-4" />
+        </button>
+      </HotkeyTooltip>
 
       <div ref={reactionMenuRef} className="relative">
         <button
@@ -642,19 +641,20 @@ function ControlsBar({
         )}
       </div>
 
-      <button
-        onClick={onToggleChat}
-        className={`relative ${isChatOpen ? activeButtonClass : defaultButtonClass}`}
-        title="Chat"
-        aria-label="Chat"
-      >
-        <MessageSquare className="w-4 h-4" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 text-[10px] font-bold bg-[#F95F4A] text-white rounded-full flex items-center justify-center">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
-        )}
-      </button>
+      <HotkeyTooltip label="Chat" hotkey="Mod+Alt+C">
+        <button
+          onClick={onToggleChat}
+          className={`relative ${isChatOpen ? activeButtonClass : defaultButtonClass}`}
+          aria-label="Chat"
+        >
+          <MessageSquare className="w-4 h-4" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 text-[10px] font-bold bg-[#F95F4A] text-white rounded-full flex items-center justify-center">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </button>
+      </HotkeyTooltip>
 
       {isPopoutSupported && (onOpenPopout || onClosePopout) && (
         <button
