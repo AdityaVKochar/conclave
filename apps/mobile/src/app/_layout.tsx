@@ -25,6 +25,7 @@ export default function Layout() {
     "PolySans-Regular": require("../../assets/fonts/PolySansTrial-Neutral.otf"),
     "PolySans-Median": require("../../assets/fonts/PolySansTrial-Median.otf"),
     "PolySans-Slim": require("../../assets/fonts/PolySansTrial-Slim.otf"),
+    Virgil: require("../../assets/fonts/Virgil-Regular.ttf"),
   });
 
   useEffect(() => {

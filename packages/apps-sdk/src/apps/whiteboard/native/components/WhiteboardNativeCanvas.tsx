@@ -3,6 +3,7 @@ import {
   PanResponder,
   StyleSheet,
   View,
+  Pressable,
   Text as RNText,
   TextInput,
   Image,
@@ -12,15 +13,31 @@ import {
 import type * as Y from "yjs";
 import type { Awareness } from "y-protocols/awareness";
 import { Canvas, Path, Rect, Oval, Line, Skia, Group } from "@shopify/react-native-skia";
+import { Check, X } from "lucide-react-native";
 import { buildRenderList } from "../../core/exports/renderList";
 import type { ToolKind, ToolSettings } from "../../core/tools/engine";
 import { ToolEngine } from "../../core/tools/engine";
 import { useWhiteboardElements } from "../../shared/hooks/useWhiteboardElements";
 import type { AppUser } from "../../../../sdk/types/index";
 import { getColorForUser } from "../../core/presence/colors";
-import type { WhiteboardElement } from "../../core/model/types";
+import type { StickyElement, TextElement, WhiteboardElement } from "../../core/model/types";
 import type { PresenceState } from "../../../../sdk/hooks/useAppPresence";
-import { getBoundsForElement } from "../../core/model/geometry";
+import { getBoundsForElement, hitTestElement } from "../../core/model/geometry";
+
+type EditableElement = TextElement | StickyElement;
+
+const isEditableElement = (element: WhiteboardElement): element is EditableElement =>
+  element.type === "text" || element.type === "sticky";
+
+const DEFAULT_SCENE_BOUNDS = {
+  x: -160,
+  y: -120,
+  width: 1280,
+  height: 880,
+};
+
+const EXTRA_SCENE_PADDING = 120;
+const WHITEBOARD_FONT_FAMILY = "Virgil";
 
 export type WhiteboardNativeCanvasProps = {
   doc: Y.Doc;
@@ -219,6 +236,41 @@ const renderElement = (element: WhiteboardElement) => {
   }
 };
 
+const getSceneBounds = (elements: WhiteboardElement[]) => {
+  if (elements.length === 0) return null;
+
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+
+  for (const element of elements) {
+    const bounds = getBoundsForElement(element);
+    const width = Math.max(1, bounds.width);
+    const height = Math.max(1, bounds.height);
+    minX = Math.min(minX, bounds.x);
+    minY = Math.min(minY, bounds.y);
+    maxX = Math.max(maxX, bounds.x + width);
+    maxY = Math.max(maxY, bounds.y + height);
+  }
+
+  if (
+    !Number.isFinite(minX) ||
+    !Number.isFinite(minY) ||
+    !Number.isFinite(maxX) ||
+    !Number.isFinite(maxY)
+  ) {
+    return null;
+  }
+
+  return {
+    x: minX,
+    y: minY,
+    width: Math.max(1, maxX - minX),
+    height: Math.max(1, maxY - minY),
+  };
+};
+
 export function WhiteboardNativeCanvas({
   doc,
   awareness,
@@ -237,9 +289,14 @@ export function WhiteboardNativeCanvas({
 }: WhiteboardNativeCanvasProps) {
   const engineRef = useRef<ToolEngine | null>(null);
   const cursorRafRef = useRef<number | null>(null);
+  const moveRafRef = useRef<number | null>(null);
+  const pendingMoveRef = useRef<{ x: number; y: number; pressure?: number } | null>(null);
+  const suppressNextBlurCommitRef = useRef(false);
   const latestCursorRef = useRef<{ x: number; y: number } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const [hasUserViewportTransform, setHasUserViewportTransform] = useState(false);
+  const [autoFitSignature, setAutoFitSignature] = useState<string | null>(null);
   const elements = useWhiteboardElements(doc, pageId);
   const renderList = useMemo(() => buildRenderList(elements), [elements]);
 
@@ -250,13 +307,6 @@ export function WhiteboardNativeCanvas({
     initialScale: number;
     initialMidX: number;
     initialMidY: number;
-    initialOffsetX: number;
-    initialOffsetY: number;
-  } | null>(null);
-  const panRef = useRef<{
-    active: boolean;
-    startX: number;
-    startY: number;
     initialOffsetX: number;
     initialOffsetY: number;
   } | null>(null);
@@ -301,6 +351,50 @@ export function WhiteboardNativeCanvas({
     }
   }, [elements, selectedId]);
 
+  const editingElement = useMemo(() => {
+    if (!editingText?.elementId) return null;
+    const element = elements.find((item) => item.id === editingText.elementId);
+    if (!element || !isEditableElement(element)) return null;
+    return element;
+  }, [editingText?.elementId, elements]);
+
+  const sceneBounds = useMemo(() => getSceneBounds(elements), [elements]);
+
+  const submitEditing = useCallback(() => {
+    suppressNextBlurCommitRef.current = true;
+    onEditingTextSubmit?.();
+  }, [onEditingTextSubmit]);
+
+  const cancelEditing = useCallback(() => {
+    suppressNextBlurCommitRef.current = true;
+    onEditingTextCancel?.();
+  }, [onEditingTextCancel]);
+
+  const handleEditorBlur = useCallback(() => {
+    if (suppressNextBlurCommitRef.current) {
+      suppressNextBlurCommitRef.current = false;
+      return;
+    }
+    onEditingTextBlur?.();
+  }, [onEditingTextBlur]);
+
+  const flushPendingMove = useCallback(() => {
+    const point = pendingMoveRef.current;
+    pendingMoveRef.current = null;
+    moveRafRef.current = null;
+    if (!point || locked) return;
+    engineRef.current?.onPointerMove(point);
+  }, [locked]);
+
+  const queuePointerMove = useCallback(
+    (point: { x: number; y: number; pressure?: number }) => {
+      pendingMoveRef.current = point;
+      if (moveRafRef.current !== null) return;
+      moveRafRef.current = requestAnimationFrame(flushPendingMove);
+    },
+    [flushPendingMove],
+  );
+
   const scheduleCursorSync = useCallback(
     (x: number, y: number) => {
       latestCursorRef.current = { x, y };
@@ -325,9 +419,61 @@ export function WhiteboardNativeCanvas({
       if (cursorRafRef.current !== null) {
         cancelAnimationFrame(cursorRafRef.current);
       }
+      if (moveRafRef.current !== null) {
+        cancelAnimationFrame(moveRafRef.current);
+      }
+      pendingMoveRef.current = null;
       clearCursor();
     };
   }, [clearCursor]);
+
+  useEffect(() => {
+    setHasUserViewportTransform(false);
+    setAutoFitSignature(null);
+  }, [pageId]);
+
+  useEffect(() => {
+    if (canvasSize.width <= 0 || canvasSize.height <= 0) return;
+    if (hasUserViewportTransform) return;
+
+    const sceneSignature =
+      elements.length > 0
+        ? `${pageId}:scene:${canvasSize.width}x${canvasSize.height}`
+        : `${pageId}:empty:${canvasSize.width}x${canvasSize.height}`;
+
+    if (sceneSignature === autoFitSignature) return;
+
+    const bounds = sceneBounds ?? DEFAULT_SCENE_BOUNDS;
+    const inset = Math.max(
+      24,
+      Math.min(56, Math.round(Math.min(canvasSize.width, canvasSize.height) * 0.08)),
+    );
+    const contentWidth = Math.max(320, bounds.width + EXTRA_SCENE_PADDING);
+    const contentHeight = Math.max(220, bounds.height + EXTRA_SCENE_PADDING);
+    const fitScale = Math.min(
+      (canvasSize.width - inset * 2) / contentWidth,
+      (canvasSize.height - inset * 2) / contentHeight,
+    );
+    const scale = Math.max(MIN_SCALE, Math.min(1, fitScale));
+    const centerX = bounds.x + bounds.width / 2;
+    const centerY = bounds.y + bounds.height / 2;
+
+    setViewport({
+      x: canvasSize.width / 2 - centerX * scale,
+      y: canvasSize.height / 2 - centerY * scale,
+      scale,
+    });
+    setAutoFitSignature(sceneSignature);
+  }, [
+    autoFitSignature,
+    canvasSize.height,
+    canvasSize.width,
+    elements.length,
+    hasUserViewportTransform,
+    pageId,
+    sceneBounds,
+    MIN_SCALE,
+  ]);
 
   const getTouches = (event: GestureResponderEvent) => {
     const touches = event.nativeEvent.touches;
@@ -353,6 +499,7 @@ export function WhiteboardNativeCanvas({
           const { force } = event.nativeEvent;
 
           if (touches.length >= 2) {
+            flushPendingMove();
             const dist = getDistance(touches[0], touches[1]);
             const midX = (touches[0].x + touches[1].x) / 2;
             const midY = (touches[0].y + touches[1].y) / 2;
@@ -365,32 +512,51 @@ export function WhiteboardNativeCanvas({
               initialOffsetX: viewport.x,
               initialOffsetY: viewport.y,
             };
-            panRef.current = null;
+            setHasUserViewportTransform(true);
           } else {
             const pt = toCanvas(touches[0].x, touches[0].y);
+
+            // In text tools, tapping an existing text/sticky should edit it instead of creating a new element.
+            if (!locked && onRequestTextEdit && (tool === "text" || tool === "sticky")) {
+              const editableHit = [...elements]
+                .reverse()
+                .find(
+                  (item): item is EditableElement =>
+                    isEditableElement(item) && hitTestElement(item, pt, 10),
+                );
+              if (editableHit) {
+                setSelectedId(editableHit.id);
+                onRequestTextEdit(editableHit.id, editableHit.text);
+                scheduleCursorSync(pt.x, pt.y);
+                pinchRef.current = null;
+                return;
+              }
+            }
+
             if (!locked) {
               engineRef.current?.onPointerDown({ x: pt.x, y: pt.y, pressure: force });
               const newSelectedId = engineRef.current?.getSelectedId() ?? null;
               setSelectedId(newSelectedId);
 
-              // Trigger text editing on text/sticky creation or selection
-              if (newSelectedId && onRequestTextEdit) {
-                const el = elements.find((e) => e.id === newSelectedId);
-                if (el && (el.type === "text" || el.type === "sticky")) {
-                  // Existing element tapped
-                  onRequestTextEdit(el.id, el.text);
-                } else if (tool === "text" || tool === "sticky") {
-                  // Newly created element — text is "" or default
-                  onRequestTextEdit(
-                    newSelectedId,
-                    tool === "sticky" ? "Sticky note" : "",
-                  );
-                }
+              // Text/sticky tools should immediately edit the newly placed element.
+              if (
+                newSelectedId &&
+                onRequestTextEdit &&
+                (tool === "text" || tool === "sticky")
+              ) {
+                const created = elements.find((item) => item.id === newSelectedId);
+                onRequestTextEdit(
+                  newSelectedId,
+                  created && isEditableElement(created)
+                    ? created.text
+                    : tool === "sticky"
+                      ? "Sticky note"
+                      : "",
+                );
               }
             }
             scheduleCursorSync(pt.x, pt.y);
             pinchRef.current = null;
-            panRef.current = null;
           }
         },
         onPanResponderMove: (event) => {
@@ -404,6 +570,7 @@ export function WhiteboardNativeCanvas({
 
             if (!pinchRef.current) {
               if (!locked) {
+                flushPendingMove();
                 engineRef.current?.onPointerUp();
               }
               pinchRef.current = {
@@ -415,6 +582,7 @@ export function WhiteboardNativeCanvas({
                 initialOffsetX: viewport.x,
                 initialOffsetY: viewport.y,
               };
+              setHasUserViewportTransform(true);
               return;
             }
 
@@ -431,16 +599,18 @@ export function WhiteboardNativeCanvas({
               (midY - pinch.initialMidY);
 
             setViewport({ x: newX, y: newY, scale: newScale });
+            setHasUserViewportTransform(true);
           } else if (!pinchRef.current) {
             // Single finger draw
             const pt = toCanvas(touches[0].x, touches[0].y);
             if (!locked) {
-              engineRef.current?.onPointerMove({ x: pt.x, y: pt.y, pressure: force });
+              queuePointerMove({ x: pt.x, y: pt.y, pressure: force });
             }
             scheduleCursorSync(pt.x, pt.y);
           }
         },
         onPanResponderRelease: () => {
+          flushPendingMove();
           if (!pinchRef.current) {
             if (!locked) {
               engineRef.current?.onPointerUp();
@@ -449,9 +619,9 @@ export function WhiteboardNativeCanvas({
             clearCursor();
           }
           pinchRef.current = null;
-          panRef.current = null;
         },
         onPanResponderTerminate: () => {
+          flushPendingMove();
           if (!pinchRef.current) {
             if (!locked) {
               engineRef.current?.onPointerUp();
@@ -460,10 +630,20 @@ export function WhiteboardNativeCanvas({
             clearCursor();
           }
           pinchRef.current = null;
-          panRef.current = null;
         },
       }),
-    [locked, clearCursor, scheduleCursorSync, viewport, toCanvas, tool, elements, onRequestTextEdit],
+    [
+      locked,
+      clearCursor,
+      scheduleCursorSync,
+      viewport,
+      toCanvas,
+      tool,
+      elements,
+      onRequestTextEdit,
+      flushPendingMove,
+      queuePointerMove,
+    ],
   );
 
   const textElements = useMemo(
@@ -552,7 +732,11 @@ export function WhiteboardNativeCanvas({
   }, []);
 
   return (
-    <View style={styles.container} {...panResponder.panHandlers} onLayout={handleLayout}>
+    <View
+      style={styles.container}
+      onLayout={handleLayout}
+      {...(editingElement ? {} : panResponder.panHandlers)}
+    >
       <Canvas style={StyleSheet.absoluteFill}>
         <Group
           transform={[
@@ -635,6 +819,15 @@ export function WhiteboardNativeCanvas({
         </Group>
       </Canvas>
 
+      {editingElement ? (
+        <Pressable
+          style={styles.editBackdrop}
+          onPressIn={submitEditing}
+          accessibilityRole="button"
+          accessibilityLabel="Finish text editing"
+        />
+      ) : null}
+
       {textElements.map((element) => {
         const isEditing = editingText?.elementId === element.id;
 
@@ -656,29 +849,44 @@ export function WhiteboardNativeCanvas({
                 }}
               >
                 <TextInput
-                  style={{
-                    color: element.color,
-                    fontSize,
-                    padding: 0,
-                    margin: 0,
-                    minHeight: fontSize + 8,
-                    backgroundColor: "rgba(0,0,0,0.35)",
-                    borderRadius: 4,
-                    paddingHorizontal: 4,
-                    paddingVertical: 2,
-                    borderWidth: 1,
-                    borderColor: "rgba(249,95,74,0.6)",
-                  }}
+                  style={[
+                    styles.textEditorInput,
+                    {
+                      color: element.color,
+                      fontSize,
+                      fontFamily: WHITEBOARD_FONT_FAMILY,
+                      minHeight: fontSize + 8,
+                    },
+                  ]}
                   value={editingText.text}
                   onChangeText={onEditingTextChange}
-                  onSubmitEditing={onEditingTextSubmit}
-                  onBlur={onEditingTextBlur}
+                  onSubmitEditing={submitEditing}
+                  onBlur={handleEditorBlur}
                   autoFocus
                   multiline
                   blurOnSubmit={false}
+                  allowFontScaling={false}
                   placeholder="Type here…"
                   placeholderTextColor="rgba(254,252,217,0.3)"
                 />
+                <View style={styles.editorActionsRow}>
+                  <Pressable
+                    onPressIn={cancelEditing}
+                    style={[styles.editorActionButton, styles.editorActionCancel]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Cancel text edit"
+                  >
+                    <X size={14} color="rgba(254,252,217,0.9)" strokeWidth={2.2} />
+                  </Pressable>
+                  <Pressable
+                    onPressIn={submitEditing}
+                    style={[styles.editorActionButton, styles.editorActionConfirm]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Save text edit"
+                  >
+                    <Check size={14} color="#060606" strokeWidth={2.4} />
+                  </Pressable>
+                </View>
               </View>
             );
           }
@@ -687,12 +895,14 @@ export function WhiteboardNativeCanvas({
             <RNText
               key={element.id}
               pointerEvents="none"
+              allowFontScaling={false}
               style={{
                 position: "absolute",
                 left,
                 top,
                 color: element.color,
                 fontSize,
+                fontFamily: WHITEBOARD_FONT_FAMILY,
               }}
             >
               {element.text}
@@ -718,23 +928,44 @@ export function WhiteboardNativeCanvas({
                 }}
               >
                 <TextInput
-                  style={{
-                    color: element.textColor,
-                    fontSize,
-                    padding: 0,
-                    margin: 0,
-                    minHeight: fontSize + 8,
-                  }}
+                  style={[
+                    styles.stickyEditorInput,
+                    {
+                      color: element.textColor,
+                      fontSize,
+                      fontFamily: WHITEBOARD_FONT_FAMILY,
+                      minHeight: fontSize + 8,
+                    },
+                  ]}
                   value={editingText.text}
                   onChangeText={onEditingTextChange}
-                  onSubmitEditing={onEditingTextSubmit}
-                  onBlur={onEditingTextBlur}
+                  onSubmitEditing={submitEditing}
+                  onBlur={handleEditorBlur}
                   autoFocus
                   multiline
                   blurOnSubmit={false}
+                  allowFontScaling={false}
                   placeholder="Type here…"
                   placeholderTextColor="rgba(0,0,0,0.3)"
                 />
+                <View style={styles.editorActionsRow}>
+                  <Pressable
+                    onPressIn={cancelEditing}
+                    style={[styles.editorActionButton, styles.editorActionCancel]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Cancel sticky note edit"
+                  >
+                    <X size={14} color="rgba(254,252,217,0.9)" strokeWidth={2.2} />
+                  </Pressable>
+                  <Pressable
+                    onPressIn={submitEditing}
+                    style={[styles.editorActionButton, styles.editorActionConfirm]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Save sticky note edit"
+                  >
+                    <Check size={14} color="#060606" strokeWidth={2.4} />
+                  </Pressable>
+                </View>
               </View>
             );
           }
@@ -743,12 +974,14 @@ export function WhiteboardNativeCanvas({
             <RNText
               key={element.id}
               pointerEvents="none"
+              allowFontScaling={false}
               style={{
                 position: "absolute",
                 left,
                 top,
                 color: element.textColor,
                 fontSize,
+                fontFamily: WHITEBOARD_FONT_FAMILY,
               }}
             >
               {element.text}
@@ -829,6 +1062,47 @@ const styles = StyleSheet.create({
     backgroundColor: "#111111",
     borderRadius: 2,
     overflow: "hidden",
+  },
+  editBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  textEditorInput: {
+    padding: 0,
+    margin: 0,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    borderRadius: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: "rgba(249,95,74,0.6)",
+    textAlignVertical: "top",
+  },
+  stickyEditorInput: {
+    padding: 0,
+    margin: 0,
+    textAlignVertical: "top",
+  },
+  editorActionsRow: {
+    marginTop: 8,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+  },
+  editorActionButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+  },
+  editorActionCancel: {
+    borderColor: "rgba(254,252,217,0.3)",
+    backgroundColor: "rgba(0,0,0,0.6)",
+  },
+  editorActionConfirm: {
+    borderColor: "rgba(249,95,74,0.95)",
+    backgroundColor: "rgba(249,95,74,0.95)",
   },
   selectionBox: {
     position: "absolute",
