@@ -19,6 +19,7 @@ export function useSmartParticipantOrder<T extends { userId: string }>(
     [participants]
   );
   const [featuredSpeakerId, setFeaturedSpeakerId] = useState<string | null>(null);
+  const participantsRef = useRef(participants);
   const featuredSpeakerIdRef = useRef<string | null>(null);
   const candidateIdRef = useRef<string | null>(null);
   const candidateSinceRef = useRef(0);
@@ -33,6 +34,10 @@ export function useSmartParticipantOrder<T extends { userId: string }>(
   };
 
   useEffect(() => {
+    participantsRef.current = participants;
+  }, [participants]);
+
+  useEffect(() => {
     featuredSpeakerIdRef.current = featuredSpeakerId;
   }, [featuredSpeakerId]);
 
@@ -45,21 +50,23 @@ export function useSmartParticipantOrder<T extends { userId: string }>(
   useEffect(() => {
     if (
       featuredSpeakerIdRef.current &&
-      !participants.some(
+      !participantsRef.current.some(
         (participant) => participant.userId === featuredSpeakerIdRef.current
       )
     ) {
       featuredSpeakerIdRef.current = null;
       setFeaturedSpeakerId(null);
     }
-  }, [participantIdsKey, participants]);
+  }, [participantIdsKey]);
 
   useEffect(() => {
     clearPromoteTimeout();
 
     const isActiveVisible =
       !!activeSpeakerId &&
-      participants.some((participant) => participant.userId === activeSpeakerId);
+      participantsRef.current.some(
+        (participant) => participant.userId === activeSpeakerId
+      );
     if (!isActiveVisible) {
       candidateIdRef.current = null;
       candidateSinceRef.current = 0;
@@ -99,7 +106,7 @@ export function useSmartParticipantOrder<T extends { userId: string }>(
     return () => {
       clearPromoteTimeout();
     };
-  }, [activeSpeakerId, participantIdsKey, participants, promoteDelayMs, minSwitchIntervalMs]);
+  }, [activeSpeakerId, participantIdsKey, promoteDelayMs, minSwitchIntervalMs]);
 
   return useMemo(
     () => prioritizeActiveSpeaker(participants, featuredSpeakerId),
