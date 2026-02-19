@@ -4,6 +4,7 @@ import {
   AlertCircle,
   ArrowRight,
   ChevronDown,
+  Crown,
   Hand,
   Mic,
   MicOff,
@@ -39,6 +40,7 @@ interface ParticipantsPanelProps {
     isHandRaised: boolean;
     isScreenSharing: boolean;
   };
+  hostUserId?: string | null;
 }
 
 function ParticipantsPanel({
@@ -53,6 +55,7 @@ function ParticipantsPanel({
   onPendingUserStale,
   getRooms,
   localState,
+  hostUserId,
 }: ParticipantsPanelProps & {
   socket: Socket | null;
   isAdmin?: boolean | null;
@@ -87,6 +90,8 @@ function ParticipantsPanel({
     useState<string | null>(null);
   const [isPendingExpanded, setIsPendingExpanded] = useState(true);
   const filteredRooms = availableRooms.filter((room) => room.id !== roomId);
+  const effectiveHostUserId =
+    hostUserId ?? (isAdmin ? currentUserId : null);
 
   const getEmailFromUserId = (userId: string): string => {
     return userId.split("#")[0] || userId;
@@ -262,6 +267,9 @@ function ParticipantsPanel({
       <div className="flex-1 min-h-0 overflow-y-auto px-2 py-2 space-y-0.5">
         {displayParticipants.map((p) => {
           const isMe = p.userId === currentUserId;
+          const isHost = Boolean(
+            effectiveHostUserId && p.userId === effectiveHostUserId
+          );
           const displayName = getDisplayName(p.userId);
           const userEmail = getEmailFromUserId(p.userId);
           const hasScreenShare =
@@ -275,9 +283,17 @@ function ParticipantsPanel({
                 isMe ? "bg-[#F95F4A]/5" : "hover:bg-[#FEFCD9]/5"
               } transition-all`}
             >
-              <span className="text-xs text-[#FEFCD9]/80 truncate flex-1">
-                {displayName} {isMe && <span className="text-[#F95F4A]/60">(you)</span>}
-              </span>
+              <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                <span className="truncate text-xs text-[#FEFCD9]/80">
+                  {displayName} {isMe && <span className="text-[#F95F4A]/60">(you)</span>}
+                </span>
+                {isHost && (
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-300/30 bg-amber-400/10 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-amber-200">
+                    <Crown className="h-2.5 w-2.5" />
+                    Host
+                  </span>
+                )}
+              </div>
 
               <div className="flex items-center gap-1 shrink-0">
                 {p.isHandRaised && (

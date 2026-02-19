@@ -138,6 +138,8 @@ export default function MeetsClient({
     setIsRoomLocked,
     isBrowserAudioMuted,
     setIsBrowserAudioMuted,
+    hostUserId,
+    setHostUserId,
   } = useMeetState({ initialRoomId });
 
   const [browserAudioNeedsGesture, setBrowserAudioNeedsGesture] = useState(false);
@@ -201,9 +203,10 @@ export default function MeetsClient({
     currentUser && !currentUser.id?.startsWith("guest-")
   );
 
+  const sessionId = refs.sessionIdRef.current;
   const userEmail = currentUser?.name || currentUser?.email || currentUser?.id || "guest";
-  const userKey = currentUser?.email || currentUser?.id || "guest";
-  const userId = `${userKey}#${refs.sessionIdRef.current}`;
+  const userKey = currentUser?.email || currentUser?.id || `guest-${sessionId}`;
+  const userId = `${userKey}#${sessionId}`;
 
   const {
     setDisplayNames,
@@ -412,6 +415,7 @@ export default function MeetsClient({
     setConnectionState,
     setMeetError,
     setWaitingMessage,
+    setHostUserId,
     isMuted,
     setIsMuted,
     isCameraOff,
@@ -787,6 +791,7 @@ export default function MeetsClient({
           onDismissMeetError={() => setMeetError(null)}
           onRetryMedia={handleRetryMedia}
           onTestSpeaker={handleTestSpeaker}
+          hostUserId={hostUserId}
         />
       </div>
     );
@@ -922,6 +927,7 @@ export default function MeetsClient({
         isPopoutSupported={isPopoutSupported}
         onOpenPopout={openPopout}
         onClosePopout={closePopout}
+        hostUserId={hostUserId}
       />
     </div>
   );
