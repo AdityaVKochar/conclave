@@ -93,6 +93,7 @@ export function useMeetMedia({
   const updateVideoQualityRef = useRef<
     (quality: VideoQuality) => Promise<void>
   >(async () => {});
+  const cameraRecoveryInFlightRef = useRef(false);
   const buildAudioConstraints = useCallback(
     (deviceId?: string): MediaTrackConstraints => ({
       ...DEFAULT_AUDIO_CONSTRAINTS,
@@ -750,10 +751,12 @@ export function useMeetMedia({
     }
 
     if (isCameraOff) {
+      let createdTrack: MediaStreamTrack | null = null;
       try {
-        setIsCameraOff(false);
         const transport = producerTransportRef.current;
-        if (!transport) return;
+        if (!transport) {
+          throw new Error("Video transport unavailable");
+        }
 
         const stream = await navigator.mediaDevices.getUserMedia({
           video:
@@ -762,6 +765,7 @@ export function useMeetMedia({
               : STANDARD_QUALITY_CONSTRAINTS,
         });
         const videoTrack = stream.getVideoTracks()[0];
+        createdTrack = videoTrack ?? null;
 
         if (!videoTrack) throw new Error("No video track obtained");
         if ("contentHint" in videoTrack) {
@@ -808,8 +812,19 @@ export function useMeetMedia({
         videoProducer.on("transportclose", () => {
           videoProducerRef.current = null;
         });
+        setIsCameraOff(false);
       } catch (err) {
         console.error("[Meets] Failed to restart video:", err);
+        if (createdTrack) {
+          stopLocalTrack(createdTrack);
+          setLocalStream((prev) => {
+            if (!prev) return prev;
+            const remaining = prev
+              .getTracks()
+              .filter((track) => track !== createdTrack && track.kind !== "video");
+            return new MediaStream(remaining);
+          });
+        }
         setIsCameraOff(true);
         setMeetError(createMeetError(err, "MEDIA_ERROR"));
       }
@@ -826,6 +841,136 @@ export function useMeetMedia({
     videoQualityRef,
     setIsCameraOff,
     setMeetError,
+  ]);
+
+  useEffect(() => {
+    if (ghostEnabled) return;
+    if (connectionState !== "joined") return;
+    if (isCameraOff) return;
+    if (videoProducerRef.current) return;
+    if (cameraRecoveryInFlightRef.current) return;
+
+    const transport = producerTransportRef.current;
+    if (!transport) return;
+
+    let cancelled = false;
+    cameraRecoveryInFlightRef.current = true;
+
+    const recoverCameraProducer = async () => {
+      let createdTrack: MediaStreamTrack | null = null;
+      try {
+        let videoTrack = localStreamRef.current?.getVideoTracks()[0] ?? null;
+
+        if (!videoTrack || videoTrack.readyState !== "live") {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video:
+              videoQualityRef.current === "low"
+                ? LOW_QUALITY_CONSTRAINTS
+                : STANDARD_QUALITY_CONSTRAINTS,
+          });
+          videoTrack = stream.getVideoTracks()[0] ?? null;
+          createdTrack = videoTrack;
+        }
+
+        if (!videoTrack) {
+          throw new Error("No video track available for recovery");
+        }
+
+        if ("contentHint" in videoTrack) {
+          videoTrack.contentHint = "motion";
+        }
+        videoTrack.onended = () => {
+          handleLocalTrackEnded("video", videoTrack);
+        };
+
+        if (createdTrack) {
+          setLocalStream((prev) => {
+            if (prev) {
+              prev.getVideoTracks().forEach((track) => {
+                stopLocalTrack(track);
+              });
+              const remaining = prev
+                .getTracks()
+                .filter((track) => track.kind !== "video");
+              return new MediaStream([...remaining, videoTrack]);
+            }
+            return new MediaStream([videoTrack]);
+          });
+        }
+
+        const quality = videoQualityRef.current;
+        let recoveredProducer: Producer;
+        try {
+          recoveredProducer = await transport.produce({
+            track: videoTrack,
+            encodings: buildWebcamSimulcastEncodings(quality),
+            appData: { type: "webcam" as ProducerType, paused: false },
+          });
+        } catch (simulcastError) {
+          console.warn(
+            "[Meets] Simulcast camera recovery failed, retrying single-layer:",
+            simulcastError
+          );
+          recoveredProducer = await transport.produce({
+            track: videoTrack,
+            encodings: [buildWebcamSingleLayerEncoding(quality)],
+            appData: { type: "webcam" as ProducerType, paused: false },
+          });
+        }
+
+        if (cancelled) {
+          try {
+            recoveredProducer.close();
+          } catch {}
+          return;
+        }
+
+        videoProducerRef.current = recoveredProducer;
+        recoveredProducer.on("transportclose", () => {
+          if (videoProducerRef.current?.id === recoveredProducer.id) {
+            videoProducerRef.current = null;
+          }
+        });
+      } catch (err) {
+        console.error("[Meets] Camera producer recovery failed:", err);
+        if (!cancelled) {
+          const existingVideoTracks = localStreamRef.current?.getVideoTracks() ?? [];
+          existingVideoTracks.forEach((track) => {
+            stopLocalTrack(track);
+          });
+          setLocalStream((prev) => {
+            if (!prev) return prev;
+            const remaining = prev
+              .getTracks()
+              .filter((track) => track.kind !== "video");
+            return new MediaStream(remaining);
+          });
+          setIsCameraOff(true);
+          setMeetError(createMeetError(err, "MEDIA_ERROR"));
+        }
+      } finally {
+        cameraRecoveryInFlightRef.current = false;
+      }
+    };
+
+    void recoverCameraProducer();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    ghostEnabled,
+    connectionState,
+    isCameraOff,
+    handleLocalTrackEnded,
+    stopLocalTrack,
+    setLocalStream,
+    setIsCameraOff,
+    setMeetError,
+    producerTransportRef,
+    videoProducerRef,
+    localStreamRef,
+    videoQualityRef,
   ]);
 
   const toggleScreenShare = useCallback(async () => {

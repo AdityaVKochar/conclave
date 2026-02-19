@@ -921,6 +921,17 @@ export function useMeetSocket({
         producers.map((producer) => producer.producerId),
       );
 
+      const staleConsumerIds: string[] = [];
+      for (const [producerId, consumer] of consumersRef.current.entries()) {
+        if (consumer.closed || consumer.track?.readyState === "ended") {
+          staleConsumerIds.push(producerId);
+        }
+      }
+
+      for (const producerId of staleConsumerIds) {
+        handleProducerClosed(producerId);
+      }
+
       for (const producerInfo of producers) {
         if (producerInfo.type !== "webcam") continue;
         if (producerInfo.kind === "audio") {
@@ -945,7 +956,17 @@ export function useMeetSocket({
       }
 
       for (const producerInfo of producers) {
-        if (consumersRef.current.has(producerInfo.producerId)) continue;
+        const consumer = consumersRef.current.get(producerInfo.producerId);
+        if (consumer) {
+          if (!producerInfo.paused) {
+            socket.emit(
+              "resumeConsumer",
+              { consumerId: consumer.id },
+              () => {}
+            );
+          }
+          continue;
+        }
         if (pendingProducersRef.current.has(producerInfo.producerId)) continue;
         await consumeProducer(producerInfo);
       }
