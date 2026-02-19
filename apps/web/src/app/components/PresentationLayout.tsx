@@ -76,7 +76,7 @@ function PresentationLayout({
   );
 
   return (
-    <div className="flex flex-1 gap-4 overflow-hidden">
+    <div className="flex flex-1 gap-4 overflow-hidden mt-5">
       <div className="flex-1 bg-[#252525] border border-white/5 rounded-lg overflow-hidden relative flex items-center justify-center">
         <video
           ref={presentationVideoRef}

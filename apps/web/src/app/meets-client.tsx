@@ -387,6 +387,12 @@ export default function MeetsClient({
     ignoreInputs: true,
   });
 
+  useHotkey(HOTKEYS.toggleScreenShare.keys as RegisterableHotkey, toggleScreenShare, {
+    enabled: connectionState === "joined",
+    requireReset: true,
+    ignoreInputs: true,
+  });
+
   const socket = useMeetSocket({
     refs,
     roomId,
@@ -617,6 +623,28 @@ export default function MeetsClient({
     onToggleMute: toggleMute,
     onToggleCamera: toggleCamera,
     onLeave: leaveRoom,
+  });
+
+  useHotkey(HOTKEYS.toggleLockMeeting.keys as RegisterableHotkey, () => {
+    if (isAdminFlag) {
+      socket.toggleRoomLock(!isRoomLocked);
+    }
+  }, {
+    enabled: connectionState === "joined",
+    requireReset: true,
+    ignoreInputs: true,
+  });
+
+  useHotkey(HOTKEYS.toggleMiniView.keys as RegisterableHotkey, () => {
+    if (isPopoutActive) {
+      closePopout();
+    } else if (isPopoutSupported) {
+      openPopout();
+    }
+  }, {
+    enabled: connectionState === "joined",
+    requireReset: true,
+    ignoreInputs: true,
   });
 
   // ============================================

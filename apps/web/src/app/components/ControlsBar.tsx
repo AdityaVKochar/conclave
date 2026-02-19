@@ -294,21 +294,22 @@ function ControlsBar({
       </HotkeyTooltip>
 
       {isAdmin && (
-        <button
-          onClick={onToggleLock}
-          className={isRoomLocked
-            ? `${baseButtonClass} !bg-amber-400 !text-black`
-            : defaultButtonClass
-          }
-          title={isRoomLocked ? "Unlock meeting" : "Lock meeting"}
-          aria-label={isRoomLocked ? "Unlock meeting" : "Lock meeting"}
-        >
-          {isRoomLocked ? (
-            <Lock className="w-4 h-4" />
-          ) : (
-            <LockOpen className="w-4 h-4" />
-          )}
-        </button>
+        <HotkeyTooltip label={isRoomLocked ? "Unlock meeting" : "Lock meeting"} hotkey={HOTKEYS.toggleLockMeeting.keys}>
+          <button
+            onClick={onToggleLock}
+            className={isRoomLocked
+              ? `${baseButtonClass} !bg-amber-400 !text-black`
+              : defaultButtonClass
+            }
+            aria-label={isRoomLocked ? "Unlock meeting" : "Lock meeting"}
+          >
+            {isRoomLocked ? (
+              <Lock className="w-4 h-4" />
+            ) : (
+              <LockOpen className="w-4 h-4" />
+            )}
+          </button>
+        </HotkeyTooltip>
       )}
 
       <HotkeyTooltip label={HOTKEYS.toggleMute.label} hotkey={HOTKEYS.toggleMute.keys}>
@@ -358,37 +359,30 @@ function ControlsBar({
         </button>
       </HotkeyTooltip>
 
-      <button
-        onClick={onToggleScreenShare}
-        disabled={screenShareDisabled}
-        className={
-          isScreenSharing
-            ? activeButtonClass
-            : screenShareDisabled
-              ? ghostDisabledClass
-              : defaultButtonClass
-        }
-        title={
-          isGhostMode
-            ? "Ghost mode: screen share locked"
-            : !canStartScreenShare
-              ? "Someone else is presenting"
-              : isScreenSharing
-                ? "Stop sharing"
-                : "Share screen"
-        }
-        aria-label={
-          isGhostMode
-            ? "Ghost mode: screen share locked"
-            : !canStartScreenShare
-              ? "Someone else is presenting"
-              : isScreenSharing
-                ? "Stop sharing"
-                : "Share screen"
-        }
-      >
-        <Monitor className="w-4 h-4" />
-      </button>
+      <HotkeyTooltip label={HOTKEYS.toggleScreenShare.label} hotkey={HOTKEYS.toggleScreenShare.keys}>
+        <button
+          onClick={onToggleScreenShare}
+          disabled={screenShareDisabled}
+          className={
+            isScreenSharing
+              ? activeButtonClass
+              : screenShareDisabled
+                ? ghostDisabledClass
+                : defaultButtonClass
+          }
+          aria-label={
+            isGhostMode
+              ? "Ghost mode: screen share locked"
+              : !canStartScreenShare
+                ? "Someone else is presenting"
+                : isScreenSharing
+                  ? "Stop sharing"
+                  : "Share screen"
+          }
+        >
+          <Monitor className="w-4 h-4" />
+        </button>
+      </HotkeyTooltip>
       {showBrowserControls && isAdmin && onLaunchBrowser && (
         <div className="relative" ref={browserMenuRef}>
           <button
@@ -548,7 +542,7 @@ function ControlsBar({
       )}
 
       <HotkeyTooltip
-        label={HOTKEYS.toggleHandRaise.label}
+        label={isGhostMode ? "Ghost mode: hand raise locked" : isHandRaised ? "Lower hand" : "Raise hand"}
         hotkey={HOTKEYS.toggleHandRaise.keys}
       >
         <button
@@ -574,24 +568,25 @@ function ControlsBar({
       </HotkeyTooltip>
 
       <div ref={reactionMenuRef} className="relative">
-        <button
-          onClick={() => setIsReactionMenuOpen((prev) => !prev)}
-          disabled={isGhostMode}
-          className={
-            isGhostMode
-              ? ghostDisabledClass
-              : isReactionMenuOpen
-                ? activeButtonClass
-                : defaultButtonClass
-          }
-          title={isGhostMode ? "Ghost mode: reactions locked" : "Reactions"}
-          aria-label={isGhostMode ? "Ghost mode: reactions locked" : "Reactions"}
-        >
-          <Smile className="w-4 h-4" />
-        </button>
+        <HotkeyTooltip label={HOTKEYS.toggleReactions.label} hotkey={HOTKEYS.toggleReactions.keys}>
+          <button
+            onClick={() => setIsReactionMenuOpen((prev) => !prev)}
+            disabled={isGhostMode}
+            className={
+              isGhostMode
+                ? ghostDisabledClass
+                : isReactionMenuOpen
+                  ? activeButtonClass
+                  : defaultButtonClass
+            }
+            aria-label={isGhostMode ? "Ghost mode: reactions locked" : "Reactions"}
+          >
+            <Smile className="w-4 h-4" />
+          </button>
+        </HotkeyTooltip>
 
         {isReactionMenuOpen && (
-          <div className="absolute bottom-14 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full bg-black/90 backdrop-blur-md px-2 py-1.5 max-w-[300px] overflow-x-auto no-scrollbar">
+          <div className="z-100 absolute bottom-14 left-1/2 -translate-x-1/2 flex items-center gap-1 rounded-full bg-black/90 backdrop-blur-md px-2 py-1.5 max-w-[300px] overflow-x-auto no-scrollbar">
             {reactionOptions.map((reaction) => (
               <button
                 key={reaction.id}
@@ -618,14 +613,15 @@ function ControlsBar({
 
       {canShowAppsMenu && (
         <div ref={appsMenuRef} className="relative">
-          <button
-            onClick={() => setIsAppsMenuOpen((prev) => !prev)}
-            className={defaultButtonClass}
-            title="Apps"
-            aria-label="Apps"
-          >
-            <LayoutGrid className="w-4 h-4" />
-          </button>
+          <HotkeyTooltip label={HOTKEYS.toggleApps.label} hotkey={HOTKEYS.toggleApps.keys}>
+            <button
+              onClick={() => setIsAppsMenuOpen((prev) => !prev)}
+              className={defaultButtonClass}
+              aria-label="Apps"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+          </HotkeyTooltip>
 
           {isAppsMenuOpen && (
             <div className="absolute bottom-14 left-1/2 -translate-x-1/2 w-56 rounded-xl border border-white/10 bg-[#0f0f0f] p-3 shadow-xl">
@@ -696,14 +692,15 @@ function ControlsBar({
       </HotkeyTooltip>
 
       {isPopoutSupported && (onOpenPopout || onClosePopout) && (
-        <button
-          onClick={isPopoutActive ? onClosePopout : onOpenPopout}
-          className={isPopoutActive ? activeButtonClass : defaultButtonClass}
-          title={isPopoutActive ? "Close mini view" : "Pop out mini view"}
-          aria-label={isPopoutActive ? "Close mini view" : "Pop out mini view"}
-        >
-          <PictureInPicture2 className="w-4 h-4" />
-        </button>
+        <HotkeyTooltip label={HOTKEYS.toggleMiniView.label} hotkey={HOTKEYS.toggleMiniView.keys}>
+          <button
+            onClick={isPopoutActive ? onClosePopout : onOpenPopout}
+            className={isPopoutActive ? activeButtonClass : defaultButtonClass}
+            aria-label={isPopoutActive ? "Close mini view" : "Pop out mini view"}
+          >
+            <PictureInPicture2 className="w-4 h-4" />
+          </button>
+        </HotkeyTooltip>
       )}
 
       <div className="w-px h-6 bg-[#FEFCD9]/10 mx-1" />
