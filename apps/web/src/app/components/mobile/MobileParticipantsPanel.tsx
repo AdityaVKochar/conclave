@@ -1,6 +1,6 @@
 "use client";
 
-import { Crown, Ghost, Hand, MicOff, X } from "lucide-react";
+import { Ghost, Hand, MicOff, X } from "lucide-react";
 import { memo } from "react";
 import type { Socket } from "socket.io-client";
 import type { Participant } from "../../lib/types";
@@ -122,7 +122,6 @@ function MobileParticipantsPanel({
                   <span className="text-[9px] text-[#F95F4A]/60 uppercase">(You)</span>
                   {effectiveHostUserId === currentUserId && (
                     <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-300/30 bg-amber-400/10 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-amber-200">
-                      <Crown className="h-2.5 w-2.5" />
                       Host
                     </span>
                   )}
@@ -151,7 +150,6 @@ function MobileParticipantsPanel({
                     </span>
                     {effectiveHostUserId === participant.userId && (
                       <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-300/30 bg-amber-400/10 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-amber-200">
-                        <Crown className="h-2.5 w-2.5" />
                         Host
                       </span>
                     )}

@@ -4,7 +4,6 @@ import {
   AlertCircle,
   ArrowRight,
   ChevronDown,
-  Crown,
   Hand,
   Mic,
   MicOff,
@@ -289,7 +288,6 @@ function ParticipantsPanel({
                 </span>
                 {isHost && (
                   <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-amber-300/30 bg-amber-400/10 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-amber-200">
-                    <Crown className="h-2.5 w-2.5" />
                     Host
                   </span>
                 )}

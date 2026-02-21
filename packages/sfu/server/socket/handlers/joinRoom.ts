@@ -9,7 +9,11 @@ import type {
 } from "../../../types.js";
 import { Logger } from "../../../utilities/loggers.js";
 import { MAX_DISPLAY_NAME_LENGTH } from "../../constants.js";
-import { buildUserIdentity, normalizeDisplayName } from "../../identity.js";
+import {
+  buildUserIdentity,
+  isGuestUserKey,
+  normalizeDisplayName,
+} from "../../identity.js";
 import { emitUserJoined, emitUserLeft } from "../../notifications.js";
 import { cleanupRoom, getOrCreateRoom, getRoomChannelId } from "../../rooms.js";
 import type { ConnectionContext } from "../context.js";
@@ -111,6 +115,14 @@ export const registerJoinRoomHandler = (context: ConnectionContext): void => {
           room.hostUserKey = userKey;
         }
         const isPrimaryHost = room.hostUserKey === userKey;
+
+        if (room.noGuests && !isHost && isGuestUserKey(userKey)) {
+          Logger.info(
+            `Guest ${userKey} blocked from room ${roomId} (no guests allowed).`,
+          );
+          respond(callback, { error: "Guests are not allowed in this meeting." });
+          return;
+        }
 
         if (isHost) {
           socket.emit("hostAssigned", { roomId, hostUserId: userId });
@@ -322,6 +334,16 @@ export const registerJoinRoomHandler = (context: ConnectionContext): void => {
 
         socket.emit("roomLockChanged", {
           locked: context.currentRoom.isLocked,
+          roomId: context.currentRoom.id,
+        });
+
+        socket.emit("noGuestsChanged", {
+          noGuests: context.currentRoom.noGuests,
+          roomId: context.currentRoom.id,
+        });
+
+        socket.emit("chatLockChanged", {
+          locked: context.currentRoom.isChatLocked,
           roomId: context.currentRoom.id,
         });
 

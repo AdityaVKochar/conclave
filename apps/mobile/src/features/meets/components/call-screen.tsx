@@ -75,11 +75,13 @@ interface CallScreenProps {
   onToggleChat: () => void;
   onToggleParticipants: () => void;
   onToggleRoomLock?: (locked: boolean) => void;
+  onToggleChatLock?: (locked: boolean) => void;
   onSendReaction: (emoji: string) => void;
   onOpenSettings: () => void;
   onLeave: () => void;
   participantCount?: number;
   isRoomLocked?: boolean;
+  isChatLocked?: boolean;
   isAdmin?: boolean;
   pendingUsersCount?: number;
 }
@@ -108,11 +110,13 @@ export function CallScreen({
   onToggleChat,
   onToggleParticipants,
   onToggleRoomLock,
+  onToggleChatLock,
   onSendReaction,
   onOpenSettings,
   onLeave,
   participantCount,
   isRoomLocked = false,
+  isChatLocked = false,
   isAdmin = false,
   pendingUsersCount = 0,
   presentationStream = null,
@@ -519,6 +523,7 @@ export function CallScreen({
         isScreenShareAvailable={isScreenShareAvailable}
         isChatOpen={isChatOpen}
         isRoomLocked={isRoomLocked}
+        isChatLocked={isChatLocked}
         isAdmin={isAdmin}
         pendingUsersCount={pendingUsersCount}
         unreadCount={unreadCount}
@@ -530,6 +535,7 @@ export function CallScreen({
         onToggleChat={onToggleChat}
         onToggleParticipants={onToggleParticipants}
         onToggleRoomLock={onToggleRoomLock}
+        onToggleChatLock={onToggleChatLock}
         isWhiteboardActive={isWhiteboardActive}
         showWhiteboardControl={isTablet && isAdmin}
         isAppsLocked={appsState.locked}

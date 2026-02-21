@@ -14,6 +14,8 @@ interface ChatPanelProps {
   onClose: () => void;
   currentUserId: string;
   isGhostMode?: boolean;
+  isChatLocked?: boolean;
+  isAdmin?: boolean;
 }
 
 function ChatPanel({
@@ -24,15 +26,18 @@ function ChatPanel({
   onClose,
   currentUserId,
   isGhostMode = false,
+  isChatLocked = false,
+  isAdmin = false,
 }: ChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
+  const isChatDisabled = isGhostMode || (isChatLocked && !isAdmin);
 
   const commandSuggestions = getCommandSuggestions(chatInput);
   const showCommandSuggestions =
-    !isGhostMode && chatInput.startsWith("/") && commandSuggestions.length > 0;
+    !isChatDisabled && chatInput.startsWith("/") && commandSuggestions.length > 0;
   const isPickingCommand =
     showCommandSuggestions && !chatInput.slice(1).includes(" ");
 
@@ -57,7 +62,7 @@ function ChatPanel({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isGhostMode) return;
+    if (isChatDisabled) return;
     if (chatInput.trim()) {
       onSend(chatInput);
       onInputChange("");
@@ -220,14 +225,20 @@ function ChatPanel({
             value={chatInput}
             onChange={(e) => onInputChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Message... (type / for commands)"
+            placeholder={
+              isGhostMode
+                ? "Ghost mode: chat disabled"
+                : isChatLocked && !isAdmin
+                  ? "Chat locked by host"
+                  : "Message... (type / for commands)"
+            }
             maxLength={1000}
-            disabled={isGhostMode}
+            disabled={isChatDisabled}
             className="flex-1 px-2.5 py-1.5 bg-black/30 border border-[#FEFCD9]/10 rounded-md text-xs text-[#FEFCD9] placeholder:text-[#FEFCD9]/30 focus:outline-none focus:border-[#FEFCD9]/20 disabled:opacity-50"
           />
           <button
             type="submit"
-            disabled={isGhostMode || !chatInput.trim()}
+            disabled={isChatDisabled || !chatInput.trim()}
             className="w-8 h-8 rounded-md flex items-center justify-center text-[#FEFCD9]/60 hover:text-[#FEFCD9] hover:bg-[#FEFCD9]/10 disabled:opacity-30 transition-all"
           >
             <Send className="w-3.5 h-3.5" />
@@ -236,6 +247,11 @@ function ChatPanel({
         {isGhostMode && (
           <div className="mt-1.5 text-[9px] text-[#FF007A]/60 text-center">
             Ghost mode
+          </div>
+        )}
+        {!isGhostMode && isChatLocked && !isAdmin && (
+          <div className="mt-1.5 text-[9px] text-amber-200/70 text-center">
+            Chat locked by host
           </div>
         )}
       </form>

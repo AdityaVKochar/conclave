@@ -5,8 +5,6 @@ import {
   Hand,
   LayoutGrid,
   Loader2,
-  Lock,
-  LockOpen,
   MessageSquare,
   Mic,
   MicOff,
@@ -15,6 +13,7 @@ import {
   Phone,
   PlaySquare,
   Presentation,
+  Shield,
   Volume2,
   VolumeX,
   Sparkles,
@@ -32,6 +31,7 @@ import type { ReactionOption } from "../lib/types";
 import { normalizeBrowserUrl } from "../lib/utils";
 import { HOTKEYS } from "../lib/hotkeys";
 import HotkeyTooltip from "./HotkeyTooltip";
+import MeetSettingsPanel from "./MeetSettingsPanel";
 
 interface ControlsBarProps {
   isMuted: boolean;
@@ -56,6 +56,10 @@ interface ControlsBarProps {
   pendingUsersCount?: number;
   isRoomLocked?: boolean;
   onToggleLock?: () => void;
+  isNoGuests?: boolean;
+  onToggleNoGuests?: () => void;
+  isChatLocked?: boolean;
+  onToggleChatLock?: () => void;
   isBrowserActive?: boolean;
   isBrowserLaunching?: boolean;
   showBrowserControls?: boolean;
@@ -168,6 +172,10 @@ function ControlsBar({
   pendingUsersCount = 0,
   isRoomLocked = false,
   onToggleLock,
+  isNoGuests = false,
+  onToggleNoGuests,
+  isChatLocked = false,
+  onToggleChatLock,
   isBrowserActive = false,
   isBrowserLaunching = false,
   showBrowserControls = true,
@@ -194,11 +202,13 @@ function ControlsBar({
   const [isReactionMenuOpen, setIsReactionMenuOpen] = useState(false);
   const [isBrowserMenuOpen, setIsBrowserMenuOpen] = useState(false);
   const [isAppsMenuOpen, setIsAppsMenuOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [browserUrlInput, setBrowserUrlInput] = useState("");
   const [browserUrlError, setBrowserUrlError] = useState<string | null>(null);
   const reactionMenuRef = useRef<HTMLDivElement>(null);
   const browserMenuRef = useRef<HTMLDivElement>(null);
   const appsMenuRef = useRef<HTMLDivElement>(null);
+  const settingsMenuRef = useRef<HTMLDivElement>(null);
   const lastReactionTimeRef = useRef<number>(0);
   const REACTION_COOLDOWN_MS = 150;
 
@@ -262,6 +272,22 @@ function ControlsBar({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isAppsMenuOpen]);
 
+  useEffect(() => {
+    if (!isSettingsOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        settingsMenuRef.current &&
+        !settingsMenuRef.current.contains(event.target as Node)
+      ) {
+        setIsSettingsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isSettingsOpen]);
+
   const handleReactionClick = useCallback(
     (reaction: ReactionOption) => {
       const now = Date.now();
@@ -294,21 +320,27 @@ function ControlsBar({
       </HotkeyTooltip>
 
       {isAdmin && (
-        <button
-          onClick={onToggleLock}
-          className={isRoomLocked
-            ? `${baseButtonClass} !bg-amber-400 !text-black`
-            : defaultButtonClass
-          }
-          title={isRoomLocked ? "Unlock meeting" : "Lock meeting"}
-          aria-label={isRoomLocked ? "Unlock meeting" : "Lock meeting"}
-        >
-          {isRoomLocked ? (
-            <Lock className="w-4 h-4" />
-          ) : (
-            <LockOpen className="w-4 h-4" />
+        <div ref={settingsMenuRef} className="relative">
+          <button
+            onClick={() => setIsSettingsOpen((prev) => !prev)}
+            className={isSettingsOpen ? activeButtonClass : defaultButtonClass}
+            title="Meeting settings"
+            aria-label="Meeting settings"
+          >
+            <Shield className="w-4 h-4" />
+          </button>
+          {isSettingsOpen && (
+            <MeetSettingsPanel
+              isRoomLocked={isRoomLocked}
+              onToggleLock={onToggleLock}
+              isNoGuests={isNoGuests}
+              onToggleNoGuests={onToggleNoGuests}
+              isChatLocked={isChatLocked}
+              onToggleChatLock={onToggleChatLock}
+              onClose={() => setIsSettingsOpen(false)}
+            />
           )}
-        </button>
+        </div>
       )}
 
       <HotkeyTooltip label={HOTKEYS.toggleMute.label} hotkey={HOTKEYS.toggleMute.keys}>

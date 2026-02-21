@@ -13,6 +13,8 @@ import {
 interface UseMeetChatOptions {
   socketRef: React.MutableRefObject<Socket | null>;
   ghostEnabled: boolean;
+  isChatLocked?: boolean;
+  isAdmin?: boolean;
   isMuted?: boolean;
   isCameraOff?: boolean;
   onToggleMute?: () => void;
@@ -29,6 +31,8 @@ interface UseMeetChatOptions {
 export function useMeetChat({
   socketRef,
   ghostEnabled,
+  isChatLocked = false,
+  isAdmin = false,
   isMuted,
   isCameraOff,
   onToggleMute,
@@ -107,6 +111,10 @@ export function useMeetChat({
   const sendChat = useCallback(
     (content: string) => {
       if (ghostEnabled) return;
+      if (isChatLocked && !isAdmin) {
+        appendLocalMessage("Chat is locked by the host.");
+        return;
+      }
       const trimmed = content.trim();
       if (!trimmed) return;
 
@@ -193,6 +201,8 @@ export function useMeetChat({
     },
     [
       ghostEnabled,
+      isChatLocked,
+      isAdmin,
       appendLocalMessage,
       clearChat,
       sendChatInternal,

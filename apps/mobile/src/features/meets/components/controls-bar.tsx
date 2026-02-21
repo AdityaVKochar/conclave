@@ -9,6 +9,7 @@ import {
   Lock,
   LockOpen,
   MessageCircle,
+  MessageSquareLock,
   Mic,
   MicOff,
   PhoneOff,
@@ -48,6 +49,7 @@ interface ControlsBarProps {
   isScreenShareAvailable?: boolean;
   isChatOpen: boolean;
   isRoomLocked: boolean;
+  isChatLocked: boolean;
   isAdmin: boolean;
   pendingUsersCount: number;
   unreadCount: number;
@@ -62,6 +64,7 @@ interface ControlsBarProps {
   onToggleChat: () => void;
   onToggleParticipants: () => void;
   onToggleRoomLock?: (locked: boolean) => void;
+  onToggleChatLock?: (locked: boolean) => void;
   onToggleWhiteboard?: () => void;
   onToggleAppsLock?: (locked: boolean) => void;
   onSendReaction: (emoji: string) => void;
@@ -198,6 +201,7 @@ export function ControlsBar({
   isScreenShareAvailable = true,
   isChatOpen,
   isRoomLocked,
+  isChatLocked,
   isAdmin,
   pendingUsersCount,
   unreadCount,
@@ -212,6 +216,7 @@ export function ControlsBar({
   onToggleChat,
   onToggleParticipants,
   onToggleRoomLock,
+  onToggleChatLock,
   onToggleWhiteboard,
   onToggleAppsLock,
   onSendReaction,
@@ -291,6 +296,16 @@ export function ControlsBar({
                     size={buttonSize}
                     iconSize={iconSize}
                     onPress={() => onToggleRoomLock?.(!isRoomLocked)}
+                  />
+                ) : null}
+                {isAdmin && onToggleChatLock ? (
+                  <ControlButton
+                    icon={MessageSquareLock}
+                    isActive={isChatLocked}
+                    activeColor={COLORS.amber}
+                    size={buttonSize}
+                    iconSize={iconSize}
+                    onPress={() => onToggleChatLock(!isChatLocked)}
                   />
                 ) : null}
                 {isAdmin && onToggleAppsLock && isWhiteboardActive ? (

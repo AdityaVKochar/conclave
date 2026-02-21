@@ -99,6 +99,10 @@ interface MeetsMainContentProps {
   onPendingUserStale?: (userId: string) => void;
   isRoomLocked: boolean;
   onToggleLock: () => void;
+  isNoGuests: boolean;
+  onToggleNoGuests: () => void;
+  isChatLocked: boolean;
+  onToggleChatLock: () => void;
   browserState?: BrowserState;
   isBrowserLaunching?: boolean;
   browserLaunchError?: string | null;
@@ -186,6 +190,10 @@ export default function MeetsMainContent({
   onPendingUserStale,
   isRoomLocked,
   onToggleLock,
+  isNoGuests,
+  onToggleNoGuests,
+  isChatLocked,
+  onToggleChatLock,
   browserState,
   isBrowserLaunching,
   browserLaunchError,
@@ -478,6 +486,10 @@ export default function MeetsMainContent({
               pendingUsersCount={isAdmin ? pendingUsers.size : 0}
               isRoomLocked={isRoomLocked}
               onToggleLock={onToggleLock}
+              isNoGuests={isNoGuests}
+              onToggleNoGuests={onToggleNoGuests}
+              isChatLocked={isChatLocked}
+              onToggleChatLock={onToggleChatLock}
               isBrowserActive={browserState?.active ?? false}
               isBrowserLaunching={isBrowserLaunching}
               showBrowserControls={showBrowserControls}
@@ -568,6 +580,8 @@ export default function MeetsMainContent({
           onClose={handleToggleChat}
           currentUserId={currentUserId}
           isGhostMode={ghostEnabled}
+          isChatLocked={isChatLocked}
+          isAdmin={isAdmin}
         />
       )}
 

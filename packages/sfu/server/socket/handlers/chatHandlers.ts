@@ -1,4 +1,5 @@
 import type { ChatMessage, SendChatData } from "../../../types.js";
+import { Admin } from "../../../config/classes/Admin.js";
 import { Logger } from "../../../utilities/loggers.js";
 import type { ConnectionContext } from "../context.js";
 import { respond } from "./ack.js";
@@ -23,6 +24,13 @@ export const registerChatHandlers = (context: ConnectionContext): void => {
         }
         if (context.currentClient.isGhost) {
           respond(callback, { error: "Ghost mode cannot send chat messages" });
+          return;
+        }
+        if (
+          context.currentRoom.isChatLocked &&
+          !(context.currentClient instanceof Admin)
+        ) {
+          respond(callback, { error: "Chat is locked by the host" });
           return;
         }
 

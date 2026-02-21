@@ -40,7 +40,7 @@ import { useMeetTts } from "./hooks/useMeetTts";
 import { useIsMobile } from "./hooks/useIsMobile";
 import { usePrewarmSocket } from "./hooks/usePrewarmSocket";
 import { useSharedBrowser } from "./hooks/useSharedBrowser";
-import { sanitizeRoomCode } from "./lib/utils";
+import { isSystemUserId, sanitizeRoomCode } from "./lib/utils";
 
 type MeetUser = {
   id?: string;
@@ -205,6 +205,10 @@ export default function MeetsClient({
     setIsParticipantsOpen,
     isRoomLocked,
     setIsRoomLocked,
+    isNoGuests,
+    setIsNoGuests,
+    isChatLocked,
+    setIsChatLocked,
     isBrowserAudioMuted,
     setIsBrowserAudioMuted,
     hostUserId,
@@ -364,6 +368,8 @@ export default function MeetsClient({
   } = useMeetChat({
     socketRef: refs.socketRef,
     ghostEnabled,
+    isChatLocked,
+    isAdmin: isAdminFlag,
     isMuted,
     isCameraOff,
     onToggleMute: handleToggleMuteCommand,
@@ -416,6 +422,40 @@ export default function MeetsClient({
     permissionHintTimeoutRef: refs.permissionHintTimeoutRef,
     audioContextRef: refs.audioContextRef,
   });
+
+  const participantCount = useMemo(() => {
+    let count = 1; // include local user
+    participants.forEach((participant) => {
+      if (!isSystemUserId(participant.userId)) {
+        count += 1;
+      }
+    });
+    return count;
+  }, [participants]);
+
+  const participantCountRef = useRef(participantCount);
+  useEffect(() => {
+    participantCountRef.current = participantCount;
+  }, [participantCount]);
+
+  const shouldPlayJoinLeaveSound = useCallback(
+    (type: "join" | "leave") => {
+      const currentCount = participantCountRef.current ?? 1;
+      const projectedCount = type === "join" ? currentCount + 1 : currentCount;
+      return projectedCount < 30;
+    },
+    []
+  );
+
+  const playNotificationSoundForEvents = useCallback(
+    (type: "join" | "leave" | "waiting") => {
+      if ((type === "join" || type === "leave") && !shouldPlayJoinLeaveSound(type)) {
+        return;
+      }
+      playNotificationSound(type);
+    },
+    [playNotificationSound, shouldPlayJoinLeaveSound]
+  );
 
   useEffect(() => {
     toggleMuteCommandRef.current = toggleMute;
@@ -505,6 +545,8 @@ export default function MeetsClient({
     setIsScreenSharing,
     setIsHandRaised,
     setIsRoomLocked,
+    setIsNoGuests,
+    setIsChatLocked,
     setActiveScreenShareId,
     setVideoQuality,
     videoQualityRef: refs.videoQualityRef,
@@ -512,7 +554,7 @@ export default function MeetsClient({
     requestMediaPermissions,
     stopLocalTrack,
     handleLocalTrackEnded,
-    playNotificationSound,
+    playNotificationSound: playNotificationSoundForEvents,
     primeAudioOutput,
     addReaction,
     clearReactions,
@@ -597,9 +639,9 @@ export default function MeetsClient({
   }, [isSigningOut]);
 
   const leaveRoom = useCallback(() => {
-    playNotificationSound("leave");
+    playNotificationSoundForEvents("leave");
     socket.cleanup();
-  }, [playNotificationSound, socket.cleanup]);
+  }, [playNotificationSoundForEvents, socket.cleanup]);
 
   useEffect(() => {
     leaveRoomCommandRef.current = leaveRoom;
@@ -836,6 +878,8 @@ export default function MeetsClient({
           onIsAdminChange={setCurrentIsAdmin}
           isRoomLocked={isRoomLocked}
           onToggleLock={() => socket.toggleRoomLock(!isRoomLocked)}
+          isChatLocked={isChatLocked}
+          onToggleChatLock={() => socket.toggleChatLock(!isChatLocked)}
           browserState={browserState}
           isBrowserLaunching={isBrowserLaunching}
           browserLaunchError={browserLaunchError}
@@ -969,6 +1013,10 @@ export default function MeetsClient({
         onIsAdminChange={setCurrentIsAdmin}
         isRoomLocked={isRoomLocked}
         onToggleLock={() => socket.toggleRoomLock(!isRoomLocked)}
+        isNoGuests={isNoGuests}
+        onToggleNoGuests={() => socket.toggleNoGuests(!isNoGuests)}
+        isChatLocked={isChatLocked}
+        onToggleChatLock={() => socket.toggleChatLock(!isChatLocked)}
         browserState={browserState}
         isBrowserLaunching={isBrowserLaunching}
         browserLaunchError={browserLaunchError}

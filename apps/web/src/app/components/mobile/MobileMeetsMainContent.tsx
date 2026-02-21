@@ -91,6 +91,8 @@ interface MobileMeetsMainContentProps {
   onIsAdminChange: (isAdmin: boolean) => void;
   isRoomLocked: boolean;
   onToggleLock: () => void;
+  isChatLocked: boolean;
+  onToggleChatLock: () => void;
   browserState?: BrowserState;
   isBrowserLaunching?: boolean;
   browserLaunchError?: string | null;
@@ -169,6 +171,8 @@ function MobileMeetsMainContent({
   onIsAdminChange,
   isRoomLocked,
   onToggleLock,
+  isChatLocked,
+  onToggleChatLock,
   browserState,
   isBrowserLaunching,
   browserLaunchError,
@@ -469,6 +473,8 @@ function MobileMeetsMainContent({
         isAdmin={isAdmin}
         isRoomLocked={isRoomLocked}
         onToggleLock={onToggleLock}
+        isChatLocked={isChatLocked}
+        onToggleChatLock={onToggleChatLock}
         isBrowserActive={browserState?.active ?? false}
         isBrowserLaunching={isBrowserLaunching}
         showBrowserControls={showBrowserControls}
@@ -499,6 +505,8 @@ function MobileMeetsMainContent({
           onClose={handleToggleChat}
           currentUserId={currentUserId}
           isGhostMode={ghostEnabled}
+          isChatLocked={isChatLocked}
+          isAdmin={isAdmin}
           getDisplayName={resolveDisplayName}
         />
       )}

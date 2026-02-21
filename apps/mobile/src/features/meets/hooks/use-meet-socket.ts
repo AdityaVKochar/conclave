@@ -74,6 +74,7 @@ interface UseMeetSocketOptions {
   setIsScreenSharing: (value: boolean) => void;
   setIsHandRaised: (value: boolean) => void;
   setIsRoomLocked: (value: boolean) => void;
+  setIsChatLocked: (value: boolean) => void;
   setActiveScreenShareId: (value: string | null) => void;
   setVideoQuality: (value: VideoQuality) => void;
   videoQualityRef: React.MutableRefObject<VideoQuality>;
@@ -134,6 +135,7 @@ export function useMeetSocket({
   setIsScreenSharing,
   setIsHandRaised,
   setIsRoomLocked,
+  setIsChatLocked,
   setActiveScreenShareId,
   setVideoQuality,
   videoQualityRef,
@@ -152,13 +154,32 @@ export function useMeetSocket({
   onSocketReady,
 }: UseMeetSocketOptions) {
   const participantIdsRef = useRef<Set<string>>(new Set([userId]));
-  const LARGE_MEETING_SOUND_THRESHOLD = 30;
 
   const now = useCallback(
     () =>
       typeof globalThis.performance?.now === "function"
         ? globalThis.performance.now()
         : Date.now(),
+    []
+  );
+
+  useEffect(() => {
+    participantIdsRef.current = new Set([userId]);
+  }, [userId]);
+
+  const shouldPlayJoinLeaveSound = useCallback(
+    (type: "join" | "leave", targetUserId: string) => {
+      if (isSystemUserId(targetUserId)) return false;
+      const participantIds = participantIdsRef.current;
+      if (type === "join") {
+        if (participantIds.has(targetUserId)) return false;
+        participantIds.add(targetUserId);
+        return true;
+      }
+      if (!participantIds.has(targetUserId)) return false;
+      participantIds.delete(targetUserId);
+      return true;
+    },
     []
   );
   const {
@@ -191,24 +212,6 @@ export function useMeetSocket({
     producerSyncIntervalRef,
   } = refs;
 
-  useEffect(() => {
-    participantIdsRef.current = new Set([userId]);
-  }, [userId]);
-
-  const shouldPlayJoinLeaveSound = (
-    type: "join" | "leave",
-    targetUserId: string
-  ) => {
-    if (isSystemUserId(targetUserId)) return false;
-    const currentCount = participantIdsRef.current.size || 1;
-    if (type === "join") {
-      const projectedCount = participantIdsRef.current.has(targetUserId)
-        ? currentCount
-        : currentCount + 1;
-      return projectedCount < LARGE_MEETING_SOUND_THRESHOLD;
-    }
-    return currentCount < LARGE_MEETING_SOUND_THRESHOLD;
-  };
 
   const cleanupRoomResources = useCallback(
     (options?: { resetRoomId?: boolean }) => {
@@ -301,10 +304,10 @@ export function useMeetSocket({
       clearReactions,
       stopLocalTrack,
       videoProducerRef,
+      userId,
       producerTransportDisconnectTimeoutRef,
       consumerTransportDisconnectTimeoutRef,
       producerSyncIntervalRef,
-      userId,
     ]
   );
 
@@ -1347,15 +1350,8 @@ export function useMeetSocket({
                 if (joinedUserId === userId) {
                   return;
                 }
-                const shouldPlaySound = shouldPlayJoinLeaveSound(
-                  "join",
-                  joinedUserId
-                );
-                if (shouldPlaySound) {
+                if (shouldPlayJoinLeaveSound("join", joinedUserId)) {
                   playNotificationSound("join");
-                }
-                if (!isSystemUserId(joinedUserId)) {
-                  participantIdsRef.current.add(joinedUserId);
                 }
                 if (displayName) {
                   setDisplayNames((prev) => {
@@ -1381,17 +1377,11 @@ export function useMeetSocket({
               "userLeft",
               ({ userId: leftUserId }: { userId: string }) => {
                 console.log("[Meets] User left:", leftUserId);
-                if (leftUserId !== userId) {
-                  const shouldPlaySound = shouldPlayJoinLeaveSound(
-                    "leave",
-                    leftUserId
-                  );
-                  if (shouldPlaySound) {
-                    playNotificationSound("leave");
-                  }
-                }
-                if (!isSystemUserId(leftUserId)) {
-                  participantIdsRef.current.delete(leftUserId);
+                if (
+                  leftUserId !== userId &&
+                  shouldPlayJoinLeaveSound("leave", leftUserId)
+                ) {
+                  playNotificationSound("leave");
                 }
                 setDisplayNames((prev) => {
                   if (!prev.has(leftUserId)) return prev;
@@ -1780,6 +1770,21 @@ export function useMeetSocket({
               }
             );
 
+            socket.on(
+              "chatLockChanged",
+              ({
+                locked,
+                roomId: eventRoomId,
+              }: {
+                locked: boolean;
+                roomId?: string;
+              }) => {
+                if (!isRoomEvent(eventRoomId)) return;
+                console.log("[Meets] Chat lock changed:", locked);
+                setIsChatLocked(locked);
+              }
+            );
+
             socketRef.current = socket;
             onSocketReady?.(socket);
           } catch (err) {
@@ -1818,6 +1823,7 @@ export function useMeetSocket({
       localStreamRef,
       pendingProducersRef,
       playNotificationSound,
+      shouldPlayJoinLeaveSound,
       producerMapRef,
       reconnectAttemptsRef,
       screenProducerRef,
@@ -2055,6 +2061,29 @@ export function useMeetSocket({
     [socketRef]
   );
 
+  const toggleChatLock = useCallback(
+    (locked: boolean): Promise<boolean> => {
+      const socket = socketRef.current;
+      if (!socket) return Promise.resolve(false);
+
+      return new Promise((resolve) => {
+        socket.emit(
+          "lockChat",
+          { locked },
+          (response: { success: boolean; locked?: boolean } | { error: string }) => {
+            if ("error" in response) {
+              console.error("[Meets] Failed to toggle chat lock:", response.error);
+              resolve(false);
+            } else {
+              resolve(response.success);
+            }
+          }
+        );
+      });
+    },
+    [socketRef]
+  );
+
   const admitUser = useCallback(
     (targetUserId: string): Promise<boolean> => {
       const socket = socketRef.current;
@@ -2108,6 +2137,7 @@ export function useMeetSocket({
     joinRoom,
     joinRoomById,
     toggleRoomLock,
+    toggleChatLock,
     admitUser,
     rejectUser,
   };

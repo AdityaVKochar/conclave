@@ -213,11 +213,67 @@ export const registerAdminHandlers = (
     respond(cb, { success: true, locked });
   });
 
+  socket.on("setNoGuests", ({ noGuests }: { noGuests: boolean }, cb) => {
+    if (!context.currentRoom) {
+      respond(cb, { error: "Room not found" });
+      return;
+    }
+
+    context.currentRoom.setNoGuests(noGuests);
+    Logger.info(
+      `Room ${context.currentRoom.id} ${noGuests ? "blocking" : "allowing"} guests`,
+    );
+
+    socket.to(context.currentRoom.channelId).emit("noGuestsChanged", {
+      noGuests,
+      roomId: context.currentRoom.id,
+    });
+
+    socket.emit("noGuestsChanged", {
+      noGuests,
+      roomId: context.currentRoom.id,
+    });
+
+    respond(cb, { success: true, noGuests });
+  });
+
+  socket.on("lockChat", ({ locked }: { locked: boolean }, cb) => {
+    if (!context.currentRoom) {
+      respond(cb, { error: "Room not found" });
+      return;
+    }
+
+    context.currentRoom.setChatLocked(locked);
+    Logger.info(
+      `Chat in room ${context.currentRoom.id} ${locked ? "locked" : "unlocked"} by admin`,
+    );
+
+    socket.to(context.currentRoom.channelId).emit("chatLockChanged", {
+      locked,
+      roomId: context.currentRoom.id,
+    });
+
+    socket.emit("chatLockChanged", {
+      locked,
+      roomId: context.currentRoom.id,
+    });
+
+    respond(cb, { success: true, locked });
+  });
+
   socket.on("getRoomLockStatus", (cb) => {
     if (!context.currentRoom) {
       respond(cb, { error: "Room not found" });
       return;
     }
     respond(cb, { locked: context.currentRoom.isLocked });
+  });
+
+  socket.on("getChatLockStatus", (cb) => {
+    if (!context.currentRoom) {
+      respond(cb, { error: "Room not found" });
+      return;
+    }
+    respond(cb, { locked: context.currentRoom.isChatLocked });
   });
 };

@@ -13,6 +13,8 @@ interface MobileChatPanelProps {
   onClose: () => void;
   currentUserId: string;
   isGhostMode?: boolean;
+  isChatLocked?: boolean;
+  isAdmin?: boolean;
   getDisplayName?: (userId: string) => string;
 }
 
@@ -24,15 +26,18 @@ function MobileChatPanel({
   onClose,
   currentUserId,
   isGhostMode = false,
+  isChatLocked = false,
+  isAdmin = false,
   getDisplayName,
 }: MobileChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [activeCommandIndex, setActiveCommandIndex] = useState(0);
+  const isChatDisabled = isGhostMode || (isChatLocked && !isAdmin);
 
   const commandSuggestions = getCommandSuggestions(chatInput);
   const showCommandSuggestions =
-    !isGhostMode && chatInput.startsWith("/") && commandSuggestions.length > 0;
+    !isChatDisabled && chatInput.startsWith("/") && commandSuggestions.length > 0;
   const isPickingCommand =
     showCommandSuggestions && !chatInput.slice(1).includes(" ");
 
@@ -46,7 +51,7 @@ function MobileChatPanel({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (chatInput.trim() && !isGhostMode) {
+    if (chatInput.trim() && !isChatDisabled) {
       onSend(chatInput.trim());
       onInputChange("");
     }
@@ -211,14 +216,18 @@ function MobileChatPanel({
           onChange={(e) => onInputChange(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={
-            isGhostMode ? "Ghost mode: chat disabled" : "Type a message or /..."
+            isGhostMode
+              ? "Ghost mode: chat disabled"
+              : isChatLocked && !isAdmin
+                ? "Chat locked by host"
+                : "Type a message or /..."
           }
-          disabled={isGhostMode}
+          disabled={isChatDisabled}
           className="flex-1 bg-[#2a2a2a] border border-[#FEFCD9]/10 rounded-full px-4 py-2.5 text-sm text-[#FEFCD9] placeholder:text-[#FEFCD9]/30 focus:outline-none focus:border-[#F95F4A]/50 disabled:opacity-50"
         />
         <button
           type="submit"
-          disabled={!chatInput.trim() || isGhostMode}
+          disabled={!chatInput.trim() || isChatDisabled}
           className="w-10 h-10 rounded-full bg-[#F95F4A] text-white flex items-center justify-center disabled:opacity-30 active:scale-95 transition-transform"
         >
           <Send className="w-4 h-4" />

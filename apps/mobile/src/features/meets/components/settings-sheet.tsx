@@ -3,7 +3,14 @@ import { StyleSheet, View as RNView } from "react-native";
 import * as Haptics from "expo-haptics";
 import { TrueSheet } from "@lodev09/react-native-true-sheet";
 import { Pressable, View } from "@/tw";
-import { ClipboardPenLine, Hand, Lock, LockOpen, StickyNote } from "lucide-react-native";
+import {
+  ClipboardPenLine,
+  Hand,
+  Lock,
+  LockOpen,
+  MessageSquareLock,
+  StickyNote,
+} from "lucide-react-native";
 import { useApps } from "@conclave/apps-sdk";
 import { SHEET_COLORS, SHEET_THEME } from "./true-sheet-theme";
 
@@ -11,10 +18,12 @@ interface SettingsSheetProps {
   visible: boolean;
   isHandRaised: boolean;
   isRoomLocked: boolean;
+  isChatLocked: boolean;
   isAdmin?: boolean;
   onOpenDisplayName?: () => void;
   onToggleHandRaised: () => void;
   onToggleRoomLock?: (locked: boolean) => void;
+  onToggleChatLock?: (locked: boolean) => void;
   onClose: () => void;
 }
 
@@ -22,10 +31,12 @@ export function SettingsSheet({
   visible,
   isHandRaised,
   isRoomLocked,
+  isChatLocked,
   isAdmin = false,
   onOpenDisplayName,
   onToggleHandRaised,
   onToggleRoomLock,
+  onToggleChatLock,
   onClose,
 }: SettingsSheetProps) {
   const { state: appsState, openApp, closeApp } = useApps();
@@ -173,6 +184,28 @@ export function SettingsSheet({
                   strokeWidth={1.5}
                 />
               )}
+            </Pressable>
+          ) : null}
+          {isAdmin ? (
+            <Pressable
+              onPress={() => {
+                if (!onToggleChatLock) return;
+                trigger(() => onToggleChatLock(!isChatLocked));
+              }}
+              style={({ pressed }) => [
+                styles.gridItem,
+                isChatLocked && styles.gridItemLockActive,
+                pressed && styles.gridItemPressed,
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={isChatLocked ? "Unlock chat" : "Lock chat"}
+              accessibilityState={{ selected: isChatLocked }}
+            >
+              <MessageSquareLock
+                size={28}
+                color={SHEET_COLORS.text}
+                strokeWidth={1.5}
+              />
             </Pressable>
           ) : null}
         </RNView>

@@ -7,6 +7,7 @@ import {
   Lock,
   LockOpen,
   MessageSquare,
+  MessageSquareLock,
   Mic,
   MicOff,
   MoreVertical,
@@ -47,6 +48,8 @@ interface MobileControlsBarProps {
   pendingUsersCount?: number;
   isRoomLocked?: boolean;
   onToggleLock?: () => void;
+  isChatLocked?: boolean;
+  onToggleChatLock?: () => void;
   isBrowserActive?: boolean;
   isBrowserLaunching?: boolean;
   showBrowserControls?: boolean;
@@ -90,6 +93,8 @@ function MobileControlsBar({
   pendingUsersCount = 0,
   isRoomLocked = false,
   onToggleLock,
+  isChatLocked = false,
+  onToggleChatLock,
   isBrowserActive = false,
   isBrowserLaunching = false,
   showBrowserControls = true,
@@ -419,6 +424,27 @@ function MobileControlsBar({
                   )}
                 </div>
                 <span className="text-sm font-medium">{isRoomLocked ? "Unlock meeting" : "Lock meeting"}</span>
+              </button>
+            )}
+            {isAdmin && onToggleChatLock && (
+              <button
+                onClick={() => {
+                  onToggleChatLock();
+                  setIsMoreMenuOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-transform duration-150 touch-feedback ${isChatLocked
+                    ? "text-amber-400"
+                    : "text-[#FEFCD9]"
+                  } hover:bg-[#FEFCD9]/5 active:bg-[#FEFCD9]/10`}
+              >
+                <div
+                  className={`h-9 w-9 rounded-xl border border-white/5 flex items-center justify-center ${
+                    isChatLocked ? "bg-amber-500/20" : "bg-[#2b2b2b]"
+                  }`}
+                >
+                  <MessageSquareLock className="w-4.5 h-4.5" />
+                </div>
+                <span className="text-sm font-medium">{isChatLocked ? "Unlock chat" : "Lock chat"}</span>
               </button>
             )}
           </div>

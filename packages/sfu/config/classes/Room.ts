@@ -67,6 +67,8 @@ export class Room {
   public cleanupTimer: NodeJS.Timeout | null = null;
   public hostUserKey: string | null = null;
   private _isLocked: boolean = false;
+  private _isChatLocked: boolean = false;
+  private _noGuests: boolean = false;
   public appsState: { activeAppId: string | null; locked: boolean } = {
     activeAppId: null,
     locked: false,
@@ -314,6 +316,22 @@ export class Room {
     if (locked) {
       this.lockedAllowedUsers.clear();
     }
+  }
+
+  get isChatLocked(): boolean {
+    return this._isChatLocked;
+  }
+
+  setChatLocked(locked: boolean): void {
+    this._isChatLocked = locked;
+  }
+
+  get noGuests(): boolean {
+    return this._noGuests;
+  }
+
+  setNoGuests(noGuests: boolean): void {
+    this._noGuests = noGuests;
   }
 
   getAdmins(): Admin[] {
