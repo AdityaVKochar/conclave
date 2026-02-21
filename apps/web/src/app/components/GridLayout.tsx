@@ -72,7 +72,8 @@ function GridLayout({
     if (count <= 9) return "grid-cols-3 grid-rows-3";
     if (count <= 12) return "grid-cols-4 grid-rows-3";
     if (count <= 16) return "grid-cols-4 grid-rows-4";
-    return "grid-cols-5 grid-rows-4";
+    if (count <= 20) return "grid-cols-5 grid-rows-4";
+    return "grid-cols-5 auto-rows-fr";
   };
 
   const gridClass = getGridLayout(totalParticipants);
@@ -82,7 +83,7 @@ function GridLayout({
     : "";
 
   return (
-    <div className={`flex-1 grid ${gridClass} gap-3 overflow-auto p-4`}>
+    <div className={`flex-1 min-h-0 grid ${gridClass} gap-3 overflow-auto p-4`}>
       <div
         className={`acm-video-tile ${localSpeakerHighlight}`}
         style={{ fontFamily: "'PolySans Trial', sans-serif" }}
